@@ -1,0 +1,104 @@
+@import "tailwindcss";
+@import "@fontsource-variable/outfit";
+
+/* useDark() de VueUse alterna la clase .dark en <html>: el modo oscuro se
+   controla por clase, no por prefers-color-scheme, para permitir el toggle manual. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --fuente-sans: "Outfit Variable", "Outfit", system-ui, sans-serif;
+
+  /* Paleta — modo claro (OKLCH, neutrales con tinte frío hacia el acento) */
+  --color-fondo: oklch(98.5% 0.003 255);
+  --color-fondo-elevado: oklch(99.5% 0.002 255);
+  --color-texto: oklch(22% 0.015 255);
+  --color-texto-sutil: oklch(46% 0.02 255);
+  --color-borde: oklch(90% 0.006 255);
+  --color-borde-fuerte: oklch(80% 0.01 255);
+  --color-acento: oklch(52% 0.17 255);
+  --color-acento-hover: oklch(46% 0.17 255);
+  --color-acento-texto: oklch(99% 0 0);
+  --color-error: oklch(55% 0.19 25);
+  --color-error-fondo: oklch(97% 0.03 25);
+  --color-error-borde: oklch(85% 0.08 25);
+  --color-exito: oklch(55% 0.14 155);
+  --sombra-panel: 0 1px 2px oklch(22% 0.015 255 / 0.04), 0 8px 24px oklch(22% 0.015 255 / 0.06);
+}
+
+:root.dark {
+  --color-fondo: oklch(18% 0.012 255);
+  --color-fondo-elevado: oklch(23% 0.013 255);
+  --color-texto: oklch(95% 0.004 255);
+  --color-texto-sutil: oklch(71% 0.015 255);
+  --color-borde: oklch(32% 0.014 255);
+  --color-borde-fuerte: oklch(40% 0.016 255);
+  --color-acento: oklch(74% 0.14 255);
+  --color-acento-hover: oklch(80% 0.13 255);
+  --color-acento-texto: oklch(15% 0.01 255);
+  --color-error: oklch(72% 0.16 25);
+  --color-error-fondo: oklch(28% 0.05 25);
+  --color-error-borde: oklch(40% 0.1 25);
+  --color-exito: oklch(70% 0.14 155);
+  --sombra-panel: 0 1px 2px oklch(0% 0 0 / 0.2), 0 8px 24px oklch(0% 0 0 / 0.3);
+}
+
+@theme inline {
+  --font-sans: var(--fuente-sans);
+  --color-fondo: var(--color-fondo);
+  --color-fondo-elevado: var(--color-fondo-elevado);
+  --color-texto: var(--color-texto);
+  --color-texto-sutil: var(--color-texto-sutil);
+  --color-borde: var(--color-borde);
+  --color-borde-fuerte: var(--color-borde-fuerte);
+  --color-acento: var(--color-acento);
+  --color-acento-hover: var(--color-acento-hover);
+  --color-acento-texto: var(--color-acento-texto);
+  --color-error: var(--color-error);
+  --color-error-fondo: var(--color-error-fondo);
+  --color-error-borde: var(--color-error-borde);
+  --color-exito: var(--color-exito);
+  --ease-salida: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-borde);
+  }
+
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    font-family: var(--fuente-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Anillo de foco visible solo para teclado; el mouse no debe verlo. */
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
