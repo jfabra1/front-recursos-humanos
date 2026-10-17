@@ -2,6 +2,19 @@
 // Dispositivo, Incidencia, Corrección, Cierre). Agrupados en un solo archivo porque son
 // un mismo dominio y la mayoría de vistas de este módulo necesitan varios a la vez.
 
+// Mismo orden/valores que DIAS_SEMANA en el modelo Horario del backend — usado para construir
+// el formulario de reglasFranja.dias día por día (ver HorariosVista.vue).
+export const OPCIONES_DIA_SEMANA = [
+  { valor: "lunes", texto: "Lunes" },
+  { valor: "martes", texto: "Martes" },
+  { valor: "miercoles", texto: "Miércoles" },
+  { valor: "jueves", texto: "Jueves" },
+  { valor: "viernes", texto: "Viernes" },
+  { valor: "sabado", texto: "Sábado" },
+  { valor: "domingo", texto: "Domingo" },
+];
+export const ETIQUETAS_DIA_SEMANA = Object.fromEntries(OPCIONES_DIA_SEMANA.map((o) => [o.valor, o.texto]));
+
 export const OPCIONES_TIPO_HORARIO = [
   { valor: "fijo", texto: "Fijo" },
   { valor: "rotativo", texto: "Rotativo" },

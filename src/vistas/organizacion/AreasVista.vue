@@ -125,6 +125,7 @@ function manejarAnular(area) {
             type="button"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
             aria-label="Editar"
+            title="Editar"
             @click="abrirEditar(area)"
           >
             <PhPencilSimple class="size-[18px]" />
@@ -146,10 +147,12 @@ function manejarAnular(area) {
     </ul>
 
     <BasePaginacion
-      v-if="areasStore.paginacionAreas && areasStore.paginacionAreas.totalPaginas > 1"
+      v-if="areasStore.paginacionAreas"
       :paginacion="areasStore.paginacionAreas"
+      :limite="areasStore.limite"
       @anterior="areasStore.irAPaginaAnteriorAreas"
       @siguiente="areasStore.irAPaginaSiguienteAreas"
+      @cambiar-limite="areasStore.cambiarLimiteAreas"
     />
 
     <BaseModal v-model="modalAbierto" :titulo="areaEditando ? 'Editar área' : 'Nueva área'">

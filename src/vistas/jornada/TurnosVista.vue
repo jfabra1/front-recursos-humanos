@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { PhCalendarCheck, PhPencilSimple, PhPlus, PhProhibit } from "@phosphor-icons/vue";
+import { PhCalendarCheck, PhEye, PhPencilSimple, PhPlus, PhProhibit } from "@phosphor-icons/vue";
 import BaseModal from "@/componentes/base/BaseModal.vue";
 import BaseSelect from "@/componentes/base/BaseSelect.vue";
 import BaseInput from "@/componentes/base/BaseInput.vue";
@@ -28,7 +28,7 @@ onMounted(() => {
 });
 
 watch(sedeSeleccionada, (sedeSlug) => {
-  if (sedeSlug) turnosStore.cargarTurnos(sedeSlug);
+  if (sedeSlug) turnosStore.cargarResumen(sedeSlug);
 });
 
 const opcionesEmpleados = computed(() =>
@@ -47,14 +47,25 @@ function formatoFechaHora(fecha) {
   return fecha ? new Date(fecha).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "—";
 }
 
+// Detalle por empleado — se abre desde "Ver detalle" en el resumen, reutiliza el mismo listado
+// paginado de turnos de siempre (turnosStore.turnos/cargarTurnos), solo que acotado a un empleado.
+const modalDetalleAbierto = ref(false);
+const empleadoDetalleId = ref(null);
+
+function abrirDetalle(empleadoId) {
+  empleadoDetalleId.value = empleadoId;
+  turnosStore.cargarTurnos(sedeSeleccionada.value, { empleadoId });
+  modalDetalleAbierto.value = true;
+}
+
 const modalAbierto = ref(false);
 const turnoEditando = ref(null);
 const confirmandoId = ref(null);
 const formulario = reactive({ empleadoId: "", horarioId: "", fecha: "", horaInicioEsperada: "", horaFinEsperada: "" });
 
-function abrirCrear() {
+function abrirCrear(empleadoId) {
   turnoEditando.value = null;
-  Object.assign(formulario, { empleadoId: "", horarioId: "", fecha: "", horaInicioEsperada: "", horaFinEsperada: "" });
+  Object.assign(formulario, { empleadoId: empleadoId || "", horarioId: "", fecha: "", horaInicioEsperada: "", horaFinEsperada: "" });
   modalAbierto.value = true;
 }
 
@@ -111,7 +122,7 @@ function manejarAnular(turno) {
         <h1 class="text-2xl font-semibold tracking-tight text-texto">Turnos</h1>
         <p class="mt-1.5 text-sm text-texto-sutil">Asignación de horarios a empleados, por sede.</p>
       </div>
-      <BaseBoton v-if="sedeSeleccionada && puede(MODULOS.TURNO, ACCIONES.CREAR)" ancho="auto" @click="abrirCrear">
+      <BaseBoton v-if="sedeSeleccionada && puede(MODULOS.TURNO, ACCIONES.CREAR)" ancho="auto" @click="abrirCrear()">
         <PhPlus class="size-4" weight="bold" />
         Nuevo turno
       </BaseBoton>
@@ -124,13 +135,12 @@ function manejarAnular(turno) {
     <BaseAlerta v-if="!sedeSeleccionada" tipo="info" class="mt-6">Selecciona una sede para ver sus turnos.</BaseAlerta>
 
     <template v-else>
-      <BaseAlerta v-if="turnosStore.error" tipo="error" class="mt-6">{{ turnosStore.error }}</BaseAlerta>
-      <BaseAlerta v-if="turnosStore.errorAccion" tipo="error" class="mt-6">{{ turnosStore.errorAccion }}</BaseAlerta>
+      <BaseAlerta v-if="turnosStore.errorResumen" tipo="error" class="mt-6">{{ turnosStore.errorResumen }}</BaseAlerta>
 
-      <p v-if="turnosStore.cargando" class="mt-8 text-sm text-texto-sutil">Cargando turnos…</p>
+      <p v-if="turnosStore.cargandoResumen" class="mt-8 text-sm text-texto-sutil">Cargando…</p>
 
       <div
-        v-else-if="turnosStore.turnos.length === 0"
+        v-else-if="turnosStore.resumen.length === 0"
         class="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-borde-fuerte py-16 text-center"
       >
         <PhCalendarCheck class="size-6 text-texto-sutil" />
@@ -138,12 +148,64 @@ function manejarAnular(turno) {
       </div>
 
       <ul v-else class="mt-6 flex flex-col divide-y divide-borde rounded-2xl border border-borde bg-fondo-elevado">
+        <li v-for="item in turnosStore.resumen" :key="item.empleadoId" class="flex items-center justify-between gap-4 px-5 py-4">
+          <div>
+            <p class="text-sm font-medium text-texto">{{ nombreEmpleado(item.empleadoId) }}</p>
+            <p class="mt-0.5 text-xs text-texto-sutil">
+              {{ nombreHorario(item.horarioMasRecienteId) }} · {{ item.cantidadTurnos }} turno{{ item.cantidadTurnos === 1 ? "" : "s" }} ·
+              {{ formatoFecha(item.primeraFecha) }} – {{ formatoFecha(item.ultimaFecha) }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-acento transition-colors hover:bg-acento/10"
+            aria-label="Ver detalle"
+            title="Ver detalle"
+            @click="abrirDetalle(item.empleadoId)"
+          >
+            <PhEye class="size-4" />
+            Ver detalle
+          </button>
+        </li>
+      </ul>
+
+      <BasePaginacion
+        v-if="turnosStore.paginacionResumen"
+        :paginacion="turnosStore.paginacionResumen"
+        :limite="turnosStore.limiteResumen"
+        @anterior="turnosStore.irAPaginaAnteriorResumen"
+        @siguiente="turnosStore.irAPaginaSiguienteResumen"
+        @cambiar-limite="turnosStore.cambiarLimiteResumen"
+      />
+    </template>
+
+    <BaseModal v-model="modalDetalleAbierto" :titulo="`Turnos de ${nombreEmpleado(empleadoDetalleId)}`" ancho="lg">
+      <div class="flex items-center justify-end">
+        <BaseBoton v-if="puede(MODULOS.TURNO, ACCIONES.CREAR)" ancho="auto" variante="secundario" @click="abrirCrear(empleadoDetalleId)">
+          <PhPlus class="size-4" weight="bold" />
+          Nuevo turno para este empleado
+        </BaseBoton>
+      </div>
+
+      <BaseAlerta v-if="turnosStore.error" tipo="error" class="mt-4">{{ turnosStore.error }}</BaseAlerta>
+      <BaseAlerta v-if="turnosStore.errorAccion" tipo="error" class="mt-4">{{ turnosStore.errorAccion }}</BaseAlerta>
+
+      <p v-if="turnosStore.cargando" class="mt-6 text-sm text-texto-sutil">Cargando turnos…</p>
+
+      <div
+        v-else-if="turnosStore.turnos.length === 0"
+        class="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-borde-fuerte py-16 text-center"
+      >
+        <PhCalendarCheck class="size-6 text-texto-sutil" />
+        <p class="text-sm text-texto-sutil">Este empleado no tiene turnos registrados.</p>
+      </div>
+
+      <ul v-else class="mt-4 flex flex-col divide-y divide-borde rounded-2xl border border-borde bg-fondo-elevado">
         <li v-for="turno in turnosStore.turnos" :key="turno._id" class="flex items-center justify-between gap-4 px-5 py-4">
           <div>
-            <p class="text-sm font-medium text-texto">{{ nombreEmpleado(turno.empleadoId) }}</p>
+            <p class="text-sm font-medium text-texto">{{ nombreHorario(turno.horarioId) }}</p>
             <p class="mt-0.5 text-xs text-texto-sutil">
-              {{ nombreHorario(turno.horarioId) }} · {{ formatoFecha(turno.fecha) }} ·
-              {{ formatoFechaHora(turno.horaInicioEsperada) }} – {{ formatoFechaHora(turno.horaFinEsperada) }}
+              {{ formatoFecha(turno.fecha) }} · {{ formatoFechaHora(turno.horaInicioEsperada) }} – {{ formatoFechaHora(turno.horaFinEsperada) }}
             </p>
           </div>
           <div class="flex items-center gap-1.5">
@@ -152,6 +214,7 @@ function manejarAnular(turno) {
               type="button"
               class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
               aria-label="Editar"
+              title="Editar"
               @click="abrirEditar(turno)"
             >
               <PhPencilSimple class="size-[18px]" />
@@ -173,12 +236,15 @@ function manejarAnular(turno) {
       </ul>
 
       <BasePaginacion
-        v-if="turnosStore.paginacion && turnosStore.paginacion.totalPaginas > 1"
+        v-if="turnosStore.paginacion"
         :paginacion="turnosStore.paginacion"
+        :limite="turnosStore.limite"
+        class="mt-4"
         @anterior="turnosStore.irAPaginaAnterior"
         @siguiente="turnosStore.irAPaginaSiguiente"
+        @cambiar-limite="turnosStore.cambiarLimite"
       />
-    </template>
+    </BaseModal>
 
     <BaseModal v-model="modalAbierto" :titulo="turnoEditando ? 'Editar turno' : 'Nuevo turno'">
       <BaseAlerta v-if="turnosStore.errorGuardado" tipo="error" class="mb-5">{{ turnosStore.errorGuardado }}</BaseAlerta>

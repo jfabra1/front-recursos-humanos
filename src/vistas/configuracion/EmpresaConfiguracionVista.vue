@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, reactive, watch } from "vue";
+import { computed, onMounted, reactive, useTemplateRef, watch } from "vue";
+import { PhTrash, PhUploadSimple } from "@phosphor-icons/vue";
 import BaseInput from "@/componentes/base/BaseInput.vue";
 import BaseInterruptor from "@/componentes/base/BaseInterruptor.vue";
 import BaseBoton from "@/componentes/base/BaseBoton.vue";
@@ -15,6 +16,14 @@ const { puede } = usePermisos();
 onMounted(() => {
   empresaStore.cargarEmpresa();
 });
+
+const inputLogo = useTemplateRef("inputLogo");
+
+function manejarSeleccionarLogo(evento) {
+  const archivo = evento.target.files?.[0];
+  if (archivo) empresaStore.subirLogo(archivo);
+  evento.target.value = "";
+}
 
 const formulario = reactive({
   nombre: "",
@@ -94,6 +103,35 @@ async function manejarEnvio() {
         Solo el administrador de la empresa puede editar esta configuración. Puedes verla, pero no guardar cambios.
       </BaseAlerta>
       <BaseAlerta v-if="empresaStore.errorGuardado" tipo="error" class="mt-6">{{ empresaStore.errorGuardado }}</BaseAlerta>
+
+      <div class="mt-6 rounded-xl border border-borde bg-fondo p-4">
+        <h3 class="text-sm font-medium text-texto">Logo de la empresa</h3>
+        <p class="mt-1 text-xs text-texto-sutil">Aparece en el encabezado de los contratos y plantillas que se generan en PDF.</p>
+        <BaseAlerta v-if="empresaStore.errorLogo" tipo="error" class="mt-3">{{ empresaStore.errorLogo }}</BaseAlerta>
+        <div class="mt-3 flex items-center gap-4">
+          <div class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-borde bg-fondo-elevado">
+            <img v-if="empresaStore.logoUrl" :src="empresaStore.logoUrl" alt="Logo de la empresa" class="size-full object-contain" />
+            <span v-else class="text-xs text-texto-sutil">Sin logo</span>
+          </div>
+          <div v-if="!soloLectura" class="flex items-center gap-2">
+            <input ref="inputLogo" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="manejarSeleccionarLogo" />
+            <BaseBoton ancho="auto" variante="secundario" :cargando="empresaStore.subiendoLogo" @click="inputLogo.click()">
+              <PhUploadSimple class="size-4" />
+              {{ empresaStore.empresa.logoArchivoId ? "Cambiar logo" : "Subir logo" }}
+            </BaseBoton>
+            <button
+              v-if="empresaStore.empresa.logoArchivoId"
+              type="button"
+              class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-error-fondo hover:text-error"
+              aria-label="Quitar logo"
+              title="Quitar logo"
+              @click="empresaStore.quitarLogo"
+            >
+              <PhTrash class="size-4" />
+            </button>
+          </div>
+        </div>
+      </div>
 
       <form class="mt-6 flex flex-col gap-5" novalidate @submit.prevent="manejarEnvio">
         <BaseInput v-model="formulario.nombre" label="Nombre de la empresa" requerido :deshabilitado="soloLectura" />

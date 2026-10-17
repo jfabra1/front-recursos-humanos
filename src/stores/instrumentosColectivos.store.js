@@ -3,6 +3,9 @@ import { ref, reactive } from "vue";
 import instrumentoColectivoServicio from "@/servicios/instrumentoColectivo.servicio";
 
 export const useInstrumentosColectivosStore = defineStore("instrumentosColectivos", () => {
+  // Lista completa SIN paginar: la usa EmpleadosVista.vue para poblar el <select> de convención
+  // colectiva al crear/editar un empleado. El listado paginado de verdad es un par de estado
+  // aparte, ver `instrumentosPagina` más abajo, exclusivo de InstrumentosColectivosVista.vue.
   const instrumentos = ref([]);
   const cargando = ref(false);
   const error = ref(null);
@@ -14,21 +17,12 @@ export const useInstrumentosColectivosStore = defineStore("instrumentosColectivo
 
   const filtros = reactive({ nombre: "" });
 
-  // La paginación es obligatoria y siempre viene del backend (nunca se recorta localmente):
-  // ver auditoria.store.js para la referencia del patrón. Este store no se reutiliza como
-  // lookup en ninguna otra vista, así que no necesita un par de estado sin paginar aparte.
-  const paginaActual = ref(1);
-  const paginacion = ref(null);
-
-  async function obtenerPagina() {
+  async function cargarInstrumentos() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value };
-      if (filtros.nombre) params.nombre = filtros.nombre;
-      const { data: respuesta } = await instrumentoColectivoServicio.listar(params);
+      const { data: respuesta } = await instrumentoColectivoServicio.listar();
       instrumentos.value = respuesta.data.instrumentos;
-      paginacion.value = respuesta.data.paginacion;
     } catch (err) {
       error.value = err.mensaje;
     } finally {
@@ -36,21 +30,49 @@ export const useInstrumentosColectivosStore = defineStore("instrumentosColectivo
     }
   }
 
-  async function cargarInstrumentos() {
+  // Listado paginado — exclusivo de la pantalla de administración de instrumentos colectivos.
+  const instrumentosPagina = ref([]);
+  const paginaActual = ref(1);
+  const paginacionInstrumentos = ref(null);
+  const limite = ref(10);
+
+  async function obtenerPaginaInstrumentos() {
+    cargando.value = true;
+    error.value = null;
+    try {
+      const params = { pagina: paginaActual.value, limite: limite.value };
+      if (filtros.nombre) params.nombre = filtros.nombre;
+      const { data: respuesta } = await instrumentoColectivoServicio.listar(params);
+      instrumentosPagina.value = respuesta.data.instrumentos;
+      paginacionInstrumentos.value = respuesta.data.paginacion;
+    } catch (err) {
+      error.value = err.mensaje;
+    } finally {
+      cargando.value = false;
+    }
+  }
+
+  async function cargarPaginaInstrumentos() {
     paginaActual.value = 1;
-    await obtenerPagina();
+    await obtenerPaginaInstrumentos();
   }
 
-  async function irAPaginaSiguiente() {
-    if (!paginacion.value?.hayPaginaSiguiente) return;
+  async function cambiarLimiteInstrumentos(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPaginaInstrumentos();
+  }
+
+  async function irAPaginaSiguienteInstrumentos() {
+    if (!paginacionInstrumentos.value?.hayPaginaSiguiente) return;
     paginaActual.value += 1;
-    await obtenerPagina();
+    await obtenerPaginaInstrumentos();
   }
 
-  async function irAPaginaAnterior() {
-    if (!paginacion.value?.hayPaginaAnterior) return;
+  async function irAPaginaAnteriorInstrumentos() {
+    if (!paginacionInstrumentos.value?.hayPaginaAnterior) return;
     paginaActual.value -= 1;
-    await obtenerPagina();
+    await obtenerPaginaInstrumentos();
   }
 
   async function crearInstrumento(datos) {
@@ -58,7 +80,8 @@ export const useInstrumentosColectivosStore = defineStore("instrumentosColectivo
     errorGuardado.value = null;
     try {
       const { data: respuesta } = await instrumentoColectivoServicio.crear(datos);
-      instrumentos.value.unshift(respuesta.data.instrumento);
+      instrumentosPagina.value.unshift(respuesta.data.instrumento);
+      instrumentos.value.unshift(respuesta.data.instrumento); // mantiene el <select> que lo usa al día sin recargar
       return true;
     } catch (err) {
       errorGuardado.value = err.mensaje;
@@ -72,8 +95,10 @@ export const useInstrumentosColectivosStore = defineStore("instrumentosColectivo
     errorAccion.value = null;
     try {
       await instrumentoColectivoServicio.anular(instrumentoId);
-      const indice = instrumentos.value.findIndex((instrumento) => instrumento._id === instrumentoId);
-      if (indice !== -1) instrumentos.value[indice].activo = false;
+      const indicePagina = instrumentosPagina.value.findIndex((instrumento) => instrumento._id === instrumentoId);
+      if (indicePagina !== -1) instrumentosPagina.value[indicePagina].activo = false;
+      const indiceLookup = instrumentos.value.findIndex((instrumento) => instrumento._id === instrumentoId);
+      if (indiceLookup !== -1) instrumentos.value[indiceLookup].activo = false;
       return true;
     } catch (err) {
       errorAccion.value = err.mensaje;
@@ -89,10 +114,14 @@ export const useInstrumentosColectivosStore = defineStore("instrumentosColectivo
     errorGuardado,
     errorAccion,
     filtros,
-    paginacion,
     cargarInstrumentos,
-    irAPaginaSiguiente,
-    irAPaginaAnterior,
+    instrumentosPagina,
+    paginacionInstrumentos,
+    limite,
+    cargarPaginaInstrumentos,
+    cambiarLimiteInstrumentos,
+    irAPaginaSiguienteInstrumentos,
+    irAPaginaAnteriorInstrumentos,
     crearInstrumento,
     anularInstrumento,
   };

@@ -34,12 +34,15 @@ export const useSedesStore = defineStore("sedes", () => {
   const sedesPagina = ref([]);
   const paginaActual = ref(1);
   const paginacionSedes = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   async function obtenerPaginaSedes() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value };
+      const params = { pagina: paginaActual.value, limite: limite.value };
       if (filtros.nombre) params.nombre = filtros.nombre;
       const { data: respuesta } = await sedeServicio.listar(params);
       sedesPagina.value = respuesta.data.sedes;
@@ -52,6 +55,12 @@ export const useSedesStore = defineStore("sedes", () => {
   }
 
   async function cargarPaginaSedes() {
+    paginaActual.value = 1;
+    await obtenerPaginaSedes();
+  }
+
+  async function cambiarLimiteSedes(nuevoLimite) {
+    limite.value = nuevoLimite;
     paginaActual.value = 1;
     await obtenerPaginaSedes();
   }
@@ -124,9 +133,11 @@ export const useSedesStore = defineStore("sedes", () => {
     cargarSedes,
     sedesPagina,
     paginacionSedes,
+    limite,
     cargarPaginaSedes,
     irAPaginaSiguienteSedes,
     irAPaginaAnteriorSedes,
+    cambiarLimiteSedes,
     crearSede,
     actualizarSede,
     anularSede,

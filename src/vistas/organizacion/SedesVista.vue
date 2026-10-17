@@ -6,6 +6,7 @@ import BaseInput from "@/componentes/base/BaseInput.vue";
 import BaseBoton from "@/componentes/base/BaseBoton.vue";
 import BaseAlerta from "@/componentes/base/BaseAlerta.vue";
 import BasePaginacion from "@/componentes/base/BasePaginacion.vue";
+import MapaUbicacionSede from "@/componentes/comunes/MapaUbicacionSede.vue";
 import { useSedesStore } from "@/stores/sedes.store";
 import { usePermisos } from "@/composables/usePermisos";
 import { MODULOS, ACCIONES } from "@/utils/permisos.util";
@@ -21,11 +22,11 @@ const modalAbierto = ref(false);
 const sedeEditando = ref(null);
 const confirmandoId = ref(null);
 
-const formulario = reactive({ nombre: "", direccion: "", lat: "", lng: "", radioMetros: "" });
+const formulario = reactive({ nombre: "", direccion: "", lat: null, lng: null, radioMetros: "100", precisionMetros: null });
 
 function abrirCrear() {
   sedeEditando.value = null;
-  Object.assign(formulario, { nombre: "", direccion: "", lat: "", lng: "", radioMetros: "" });
+  Object.assign(formulario, { nombre: "", direccion: "", lat: null, lng: null, radioMetros: "100", precisionMetros: null });
   modalAbierto.value = true;
 }
 
@@ -34,9 +35,10 @@ function abrirEditar(sede) {
   Object.assign(formulario, {
     nombre: sede.nombre,
     direccion: sede.direccion || "",
-    lat: String(sede.geocerca.lat),
-    lng: String(sede.geocerca.lng),
-    radioMetros: sede.geocerca.radioMetros ? String(sede.geocerca.radioMetros) : "",
+    lat: sede.geocerca.lat,
+    lng: sede.geocerca.lng,
+    radioMetros: sede.geocerca.radioMetros ? String(sede.geocerca.radioMetros) : "100",
+    precisionMetros: null, // al editar, cualquier ajuste del pin se trata como manual hasta que se re-ubique con el GPS
   });
   modalAbierto.value = true;
 }
@@ -46,9 +48,10 @@ async function manejarEnvio() {
     nombre: formulario.nombre,
     direccion: formulario.direccion || undefined,
     geocerca: {
-      lat: Number(formulario.lat),
-      lng: Number(formulario.lng),
+      lat: formulario.lat,
+      lng: formulario.lng,
       ...(formulario.radioMetros ? { radioMetros: Number(formulario.radioMetros) } : {}),
+      ...(formulario.precisionMetros != null ? { precisionMetros: formulario.precisionMetros } : {}),
     },
   };
 
@@ -121,6 +124,7 @@ function manejarAnular(sede) {
             type="button"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
             aria-label="Editar"
+            title="Editar"
             @click="abrirEditar(sede)"
           >
             <PhPencilSimple class="size-[18px]" />
@@ -142,21 +146,33 @@ function manejarAnular(sede) {
     </ul>
 
     <BasePaginacion
-      v-if="sedesStore.paginacionSedes && sedesStore.paginacionSedes.totalPaginas > 1"
+      v-if="sedesStore.paginacionSedes"
       :paginacion="sedesStore.paginacionSedes"
+      :limite="sedesStore.limite"
       @anterior="sedesStore.irAPaginaAnteriorSedes"
       @siguiente="sedesStore.irAPaginaSiguienteSedes"
+      @cambiar-limite="sedesStore.cambiarLimiteSedes"
     />
 
-    <BaseModal v-model="modalAbierto" :titulo="sedeEditando ? 'Editar sede' : 'Nueva sede'">
+    <BaseModal v-model="modalAbierto" :titulo="sedeEditando ? 'Editar sede' : 'Nueva sede'" ancho="lg">
       <BaseAlerta v-if="sedesStore.errorGuardado" tipo="error" class="mb-5">{{ sedesStore.errorGuardado }}</BaseAlerta>
       <form class="flex flex-col gap-4" novalidate @submit.prevent="manejarEnvio">
         <BaseInput v-model="formulario.nombre" label="Nombre" placeholder="Sede principal" requerido />
         <BaseInput v-model="formulario.direccion" label="Dirección" placeholder="Calle 10 # 5-20, Medellín" />
-        <div class="grid grid-cols-2 gap-3">
-          <BaseInput v-model="formulario.lat" type="number" label="Latitud" placeholder="6.2442" requerido />
-          <BaseInput v-model="formulario.lng" type="number" label="Longitud" placeholder="-75.5812" requerido />
+
+        <div>
+          <label class="text-sm font-medium text-texto">Ubicación</label>
+          <p class="mt-1 text-xs text-texto-sutil">Haz clic en el mapa o arrastra el marcador para fijar el punto exacto de la sede.</p>
+          <MapaUbicacionSede
+            v-model:lat="formulario.lat"
+            v-model:lng="formulario.lng"
+            v-model:precision-metros="formulario.precisionMetros"
+            :radio-metros="Number(formulario.radioMetros) || 100"
+            class="mt-2"
+          />
+          <p v-if="formulario.lat != null" class="mt-1.5 font-mono text-xs text-texto-sutil">{{ formulario.lat }}, {{ formulario.lng }}</p>
         </div>
+
         <BaseInput v-model="formulario.radioMetros" type="number" label="Radio de geocerca (metros)" placeholder="100" />
         <BaseBoton tipo="submit" :cargando="sedesStore.guardando" class="mt-2">
           {{ sedeEditando ? "Guardar cambios" : "Crear sede" }}

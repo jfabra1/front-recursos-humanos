@@ -46,6 +46,7 @@ const tipoReal = computed(() => (esPassword.value && mostrarPassword.value ? "te
         type="button"
         class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-texto-sutil transition-colors hover:text-texto"
         :aria-label="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+        :title="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
         @click="mostrarPassword = !mostrarPassword"
       >
         <PhEyeSlash v-if="mostrarPassword" class="size-[18px]" />

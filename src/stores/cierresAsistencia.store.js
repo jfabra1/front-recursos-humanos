@@ -18,12 +18,16 @@ export const useCierresAsistenciaStore = defineStore("cierresAsistencia", () => 
   // ver auditoria.store.js para la referencia del patrón.
   const paginaActual = ref(1);
   const paginacion = ref(null);
+  const limite = ref(10);
 
   async function obtenerPagina() {
     cargando.value = true;
     error.value = null;
     try {
-      const { data: respuesta } = await cierreAsistenciaServicio.listar(sedeSlugActual.value, { pagina: paginaActual.value });
+      const { data: respuesta } = await cierreAsistenciaServicio.listar(sedeSlugActual.value, {
+        pagina: paginaActual.value,
+        limite: limite.value,
+      });
       cierres.value = respuesta.data.cierres;
       paginacion.value = respuesta.data.paginacion;
     } catch (err) {
@@ -31,6 +35,12 @@ export const useCierresAsistenciaStore = defineStore("cierresAsistencia", () => 
     } finally {
       cargando.value = false;
     }
+  }
+
+  async function cambiarLimite(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPagina();
   }
 
   // Punto de entrada público (montar la vista, cambiar sede): siempre vuelve a la página 1.
@@ -108,7 +118,12 @@ export const useCierresAsistenciaStore = defineStore("cierresAsistencia", () => 
     errorGuardado,
     procesando,
     errorAccion,
+    paginacion,
+    limite,
     cargarCierres,
+    irAPaginaSiguiente,
+    irAPaginaAnterior,
+    cambiarLimite,
     crearCierre,
     calcularTotales,
     avanzarEstado,

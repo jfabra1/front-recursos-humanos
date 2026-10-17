@@ -20,12 +20,13 @@ export const useTurnosStore = defineStore("turnos", () => {
   const paginaActual = ref(1);
   const paginacion = ref(null);
   const filtrosActuales = ref({});
+  const limite = ref(10);
 
   async function obtenerPagina() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value, ...filtrosActuales.value };
+      const params = { pagina: paginaActual.value, limite: limite.value, ...filtrosActuales.value };
       const { data: respuesta } = await turnoServicio.listar(sedeSlugActual.value, params);
       turnos.value = respuesta.data.turnos;
       paginacion.value = respuesta.data.paginacion;
@@ -34,6 +35,12 @@ export const useTurnosStore = defineStore("turnos", () => {
     } finally {
       cargando.value = false;
     }
+  }
+
+  async function cambiarLimite(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPagina();
   }
 
   // Punto de entrada público (montar la vista, cambiar de sede o de filtro): siempre vuelve a
@@ -63,6 +70,7 @@ export const useTurnosStore = defineStore("turnos", () => {
     try {
       const { data: respuesta } = await turnoServicio.crear(sedeSlugActual.value, datos);
       turnos.value.unshift(respuesta.data.turno);
+      if (sedeSlugResumenActual.value) await obtenerPaginaResumen(); // refleja el nuevo conteo
       return true;
     } catch (err) {
       errorGuardado.value = err.mensaje;
@@ -93,11 +101,66 @@ export const useTurnosStore = defineStore("turnos", () => {
     try {
       await turnoServicio.anular(sedeSlugActual.value, turnoId);
       turnos.value = turnos.value.filter((turno) => turno._id !== turnoId);
+      if (sedeSlugResumenActual.value) await obtenerPaginaResumen(); // refleja el nuevo conteo
       return true;
     } catch (err) {
       errorAccion.value = err.mensaje;
       return false;
     }
+  }
+
+  // Resumen agrupado por empleado (1 renglón por empleado) — la vista principal de esta pantalla:
+  // con horarios fijos generando turnos automáticamente, listar turno por turno no escala con
+  // muchos empleados (ver TurnoRepository.resumenPorEmpleado en el backend). El detalle completo
+  // de un empleado puntual sigue usando `turnos`/`cargarTurnos({empleadoId})` de arriba.
+  const resumen = ref([]);
+  const sedeSlugResumenActual = ref(null);
+  const cargandoResumen = ref(false);
+  const errorResumen = ref(null);
+
+  const paginaResumenActual = ref(1);
+  const paginacionResumen = ref(null);
+  const limiteResumen = ref(10);
+
+  async function obtenerPaginaResumen() {
+    cargandoResumen.value = true;
+    errorResumen.value = null;
+    try {
+      const { data: respuesta } = await turnoServicio.resumenPorEmpleado(sedeSlugResumenActual.value, {
+        pagina: paginaResumenActual.value,
+        limite: limiteResumen.value,
+      });
+      resumen.value = respuesta.data.resumen;
+      paginacionResumen.value = respuesta.data.paginacion;
+    } catch (err) {
+      errorResumen.value = err.mensaje;
+    } finally {
+      cargandoResumen.value = false;
+    }
+  }
+
+  async function cargarResumen(sedeSlug) {
+    sedeSlugResumenActual.value = sedeSlug;
+    paginaResumenActual.value = 1;
+    await obtenerPaginaResumen();
+  }
+
+  async function cambiarLimiteResumen(nuevoLimite) {
+    limiteResumen.value = nuevoLimite;
+    paginaResumenActual.value = 1;
+    await obtenerPaginaResumen();
+  }
+
+  async function irAPaginaSiguienteResumen() {
+    if (!paginacionResumen.value?.hayPaginaSiguiente) return;
+    paginaResumenActual.value += 1;
+    await obtenerPaginaResumen();
+  }
+
+  async function irAPaginaAnteriorResumen() {
+    if (!paginacionResumen.value?.hayPaginaAnterior) return;
+    paginaResumenActual.value -= 1;
+    await obtenerPaginaResumen();
   }
 
   return {
@@ -109,11 +172,22 @@ export const useTurnosStore = defineStore("turnos", () => {
     errorGuardado,
     errorAccion,
     paginacion,
+    limite,
     cargarTurnos,
     irAPaginaSiguiente,
     irAPaginaAnterior,
+    cambiarLimite,
     crearTurno,
     actualizarTurno,
     anularTurno,
+    resumen,
+    cargandoResumen,
+    errorResumen,
+    paginacionResumen,
+    limiteResumen,
+    cargarResumen,
+    cambiarLimiteResumen,
+    irAPaginaSiguienteResumen,
+    irAPaginaAnteriorResumen,
   };
 });

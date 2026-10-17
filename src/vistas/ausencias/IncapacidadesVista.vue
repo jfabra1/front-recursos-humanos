@@ -176,10 +176,12 @@ async function manejarRegistrar() {
     </ul>
 
     <BasePaginacion
-      v-if="incapacidadesStore.paginacion && incapacidadesStore.paginacion.totalPaginas > 1"
+      v-if="incapacidadesStore.paginacion"
       :paginacion="incapacidadesStore.paginacion"
+      :limite="incapacidadesStore.limite"
       @anterior="incapacidadesStore.irAPaginaAnterior"
       @siguiente="incapacidadesStore.irAPaginaSiguiente"
+      @cambiar-limite="incapacidadesStore.cambiarLimite"
     />
 
     <BaseModal v-model="modalRegistrarAbierto" titulo="Registrar incapacidad">

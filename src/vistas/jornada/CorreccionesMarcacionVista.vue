@@ -102,6 +102,7 @@ async function manejarRechazar(solicitud) {
             :disabled="procesandoId === solicitud._id"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-error-fondo hover:text-error disabled:opacity-50"
             aria-label="Rechazar"
+            title="Rechazar"
             @click="manejarRechazar(solicitud)"
           >
             <PhXCircle class="size-5" />
@@ -111,6 +112,7 @@ async function manejarRechazar(solicitud) {
             :disabled="procesandoId === solicitud._id"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-exito/10 hover:text-exito disabled:opacity-50"
             aria-label="Aprobar"
+            title="Aprobar"
             @click="manejarAprobar(solicitud)"
           >
             <PhCheckCircle class="size-5" />

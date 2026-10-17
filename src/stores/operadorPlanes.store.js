@@ -31,12 +31,15 @@ export const useOperadorPlanesStore = defineStore("operadorPlanes", () => {
   const planesPagina = ref([]);
   const paginaActual = ref(1);
   const paginacionPlanes = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   async function obtenerPaginaPlanes() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value };
+      const params = { pagina: paginaActual.value, limite: limite.value };
       if (filtros.nombre) params.nombre = filtros.nombre;
       const { data: respuesta } = await operadorPlanServicio.listar(params);
       planesPagina.value = respuesta.data.planes;
@@ -49,6 +52,12 @@ export const useOperadorPlanesStore = defineStore("operadorPlanes", () => {
   }
 
   async function cargarPaginaPlanes() {
+    paginaActual.value = 1;
+    await obtenerPaginaPlanes();
+  }
+
+  async function cambiarLimitePlanes(nuevoLimite) {
+    limite.value = nuevoLimite;
     paginaActual.value = 1;
     await obtenerPaginaPlanes();
   }
@@ -91,9 +100,11 @@ export const useOperadorPlanesStore = defineStore("operadorPlanes", () => {
     cargarPlanes,
     planesPagina,
     paginacionPlanes,
+    limite,
     cargarPaginaPlanes,
     irAPaginaSiguientePlanes,
     irAPaginaAnteriorPlanes,
+    cambiarLimitePlanes,
     crearPlan,
   };
 });

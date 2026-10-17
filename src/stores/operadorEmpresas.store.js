@@ -1,18 +1,65 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, reactive } from "vue";
 import operadorEmpresaServicio from "@/servicios/operadorEmpresa.servicio";
 
-// El backend de operador aún no expone un listado de empresas (solo crear/suspender/
-// reactivar por id), así que este store no mantiene una colección: solo el resultado
-// de la última acción, para retroalimentar el formulario correspondiente.
 export const useOperadorEmpresasStore = defineStore("operadorEmpresas", () => {
+  const empresas = ref([]);
+  const cargando = ref(false);
+  const error = ref(null);
+
+  const filtros = reactive({ estado: "", planId: "", buscar: "" });
+
+  const paginaActual = ref(1);
+  const paginacion = ref(null);
+  const limite = ref(10);
+
   const creando = ref(false);
   const errorCreacion = ref(null);
   const empresaCreada = ref(null);
 
   const actualizandoEstado = ref(false);
   const errorActualizacion = ref(null);
-  const ultimaActualizacion = ref(null);
+
+  async function obtenerPagina() {
+    cargando.value = true;
+    error.value = null;
+    try {
+      const params = { pagina: paginaActual.value, limite: limite.value };
+      if (filtros.estado) params.estado = filtros.estado;
+      if (filtros.planId) params.planId = filtros.planId;
+      if (filtros.buscar) params.buscar = filtros.buscar;
+      const { data: respuesta } = await operadorEmpresaServicio.listar(params);
+      empresas.value = respuesta.data.empresas;
+      paginacion.value = respuesta.data.paginacion;
+    } catch (err) {
+      error.value = err.mensaje;
+    } finally {
+      cargando.value = false;
+    }
+  }
+
+  async function cargarEmpresas() {
+    paginaActual.value = 1;
+    await obtenerPagina();
+  }
+
+  async function cambiarLimite(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPagina();
+  }
+
+  async function irAPaginaSiguiente() {
+    if (!paginacion.value?.hayPaginaSiguiente) return;
+    paginaActual.value += 1;
+    await obtenerPagina();
+  }
+
+  async function irAPaginaAnterior() {
+    if (!paginacion.value?.hayPaginaAnterior) return;
+    paginaActual.value -= 1;
+    await obtenerPagina();
+  }
 
   async function crearEmpresa(datosEmpresa) {
     creando.value = true;
@@ -30,12 +77,19 @@ export const useOperadorEmpresasStore = defineStore("operadorEmpresas", () => {
     }
   }
 
+  // La respuesta de suspender/reactivar solo trae {id, estado} (no la empresa completa) — se
+  // actualiza el estado en el listado local en vez de volver a pedir toda la página.
+  function actualizarEstadoLocal(empresaId, estado) {
+    const indice = empresas.value.findIndex((empresa) => empresa._id === empresaId);
+    if (indice !== -1) empresas.value[indice].estado = estado;
+  }
+
   async function suspenderEmpresa(empresaId, motivo) {
     actualizandoEstado.value = true;
     errorActualizacion.value = null;
     try {
       const { data: respuesta } = await operadorEmpresaServicio.suspender(empresaId, motivo);
-      ultimaActualizacion.value = respuesta.data.empresa;
+      actualizarEstadoLocal(respuesta.data.empresa.id, respuesta.data.empresa.estado);
       return true;
     } catch (err) {
       errorActualizacion.value = err.mensaje;
@@ -50,7 +104,7 @@ export const useOperadorEmpresasStore = defineStore("operadorEmpresas", () => {
     errorActualizacion.value = null;
     try {
       const { data: respuesta } = await operadorEmpresaServicio.reactivar(empresaId);
-      ultimaActualizacion.value = respuesta.data.empresa;
+      actualizarEstadoLocal(respuesta.data.empresa.id, respuesta.data.empresa.estado);
       return true;
     } catch (err) {
       errorActualizacion.value = err.mensaje;
@@ -61,13 +115,22 @@ export const useOperadorEmpresasStore = defineStore("operadorEmpresas", () => {
   }
 
   return {
+    empresas,
+    cargando,
+    error,
+    filtros,
+    paginacion,
+    limite,
+    cargarEmpresas,
+    cambiarLimite,
+    irAPaginaSiguiente,
+    irAPaginaAnterior,
     creando,
     errorCreacion,
     empresaCreada,
+    crearEmpresa,
     actualizandoEstado,
     errorActualizacion,
-    ultimaActualizacion,
-    crearEmpresa,
     suspenderEmpresa,
     reactivarEmpresa,
   };

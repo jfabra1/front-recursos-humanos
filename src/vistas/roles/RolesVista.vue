@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { PhPlus, PhProhibit, PhShieldCheck, PhTrash, PhUserGear } from "@phosphor-icons/vue";
 import BaseModal from "@/componentes/base/BaseModal.vue";
 import BaseInput from "@/componentes/base/BaseInput.vue";
@@ -69,8 +69,25 @@ const formularioExcepcion = reactive({ modulo: "empleado", accion: "leer", alcan
 function abrirPermisos(rol) {
   rolPermisos.value = rol;
   permisosStore.cargarExcepciones(rol._id);
+  rolesStore.cargarPermisosEfectivos(rol._id);
   modalPermisosAbierto.value = true;
 }
+
+// Resumen "lo que este rol puede hacer hoy" — módulo por módulo, en el mismo orden que
+// OPCIONES_MODULO, mostrando solo los que tienen al menos una acción (evita listar 26 módulos
+// en su mayoría vacíos). Es lo que faltaba para que "sin excepciones" no se leyera como "sin
+// permisos": antes de esto, un rol como Empleado (que sí puede crear asistencia/vacaciones/etc.
+// por la plantilla base) no mostraba nada de eso aquí, solo la lista de excepciones vacía.
+const ORDEN_ACCIONES = OPCIONES_ACCION.map((opcion) => opcion.valor);
+
+const modulosConAcceso = computed(() => {
+  if (!rolesStore.permisosEfectivos) return [];
+  return OPCIONES_MODULO.map((opcion) => ({
+    modulo: opcion.valor,
+    texto: opcion.texto,
+    acciones: [...(rolesStore.permisosEfectivos[opcion.valor] || [])].sort((a, b) => ORDEN_ACCIONES.indexOf(a) - ORDEN_ACCIONES.indexOf(b)),
+  })).filter((item) => item.acciones.length > 0);
+});
 
 async function manejarOtorgarExcepcion() {
   const datos = {
@@ -80,10 +97,12 @@ async function manejarOtorgarExcepcion() {
     alcance: formularioExcepcion.alcance,
     otorgado: formularioExcepcion.otorgado === "true",
   };
-  await permisosStore.otorgarExcepcion(datos);
+  // El resumen "Lo que este rol puede hacer hoy" se calculó una vez al abrir el modal — sin
+  // esto, quedaba desactualizado después de guardar una excepción hasta cerrar y reabrir.
+  if (await permisosStore.otorgarExcepcion(datos)) rolesStore.cargarPermisosEfectivos(rolPermisos.value._id);
 }
 
-function manejarEliminarExcepcion(excepcion) {
+async function manejarEliminarExcepcion(excepcion) {
   if (confirmandoExcepcionId.value !== excepcion._id) {
     confirmandoExcepcionId.value = excepcion._id;
     setTimeout(() => {
@@ -92,7 +111,7 @@ function manejarEliminarExcepcion(excepcion) {
     return;
   }
   confirmandoExcepcionId.value = null;
-  permisosStore.eliminarExcepcion(excepcion._id);
+  if (await permisosStore.eliminarExcepcion(excepcion._id)) rolesStore.cargarPermisosEfectivos(rolPermisos.value._id);
 }
 </script>
 
@@ -135,6 +154,7 @@ function manejarEliminarExcepcion(excepcion) {
             type="button"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
             aria-label="Permisos"
+            title="Permisos"
             @click="abrirPermisos(rol)"
           >
             <PhShieldCheck class="size-[18px]" />
@@ -144,6 +164,7 @@ function manejarEliminarExcepcion(excepcion) {
             type="button"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
             aria-label="Renombrar"
+            title="Renombrar"
             @click="abrirEditarRol(rol)"
           >
             <PhUserGear class="size-[18px]" />
@@ -165,10 +186,12 @@ function manejarEliminarExcepcion(excepcion) {
     </ul>
 
     <BasePaginacion
-      v-if="rolesStore.paginacion && rolesStore.paginacion.totalPaginas > 1"
+      v-if="rolesStore.paginacion"
       :paginacion="rolesStore.paginacion"
+      :limite="rolesStore.limite"
       @anterior="rolesStore.irAPaginaAnterior"
       @siguiente="rolesStore.irAPaginaSiguiente"
+      @cambiar-limite="rolesStore.cambiarLimite"
     />
 
     <BaseModal v-model="modalRolAbierto" :titulo="rolEditando ? 'Renombrar rol' : 'Nuevo rol'">
@@ -183,10 +206,31 @@ function manejarEliminarExcepcion(excepcion) {
     </BaseModal>
 
     <BaseModal v-model="modalPermisosAbierto" :titulo="`Permisos de ${rolPermisos?.nombre}`">
-      <p class="mb-5 text-xs text-texto-sutil">
-        Base: <strong class="text-texto">{{ ETIQUETAS_ROL_BASE[rolPermisos?.rolBase] }}</strong
-        >. Solo se listan las excepciones — lo que no aparece aquí sigue el comportamiento por defecto de esa plantilla.
+      <p class="mb-4 text-xs text-texto-sutil">
+        Base: <strong class="text-texto">{{ ETIQUETAS_ROL_BASE[rolPermisos?.rolBase] }}</strong>
       </p>
+
+      <h3 class="text-sm font-semibold text-texto">Lo que este rol puede hacer hoy</h3>
+      <p class="mt-1 mb-3 text-xs text-texto-sutil">Plantilla base y excepciones ya combinadas — solo se listan los módulos con algún acceso.</p>
+
+      <p v-if="rolesStore.cargandoPermisosEfectivos" class="mb-5 text-sm text-texto-sutil">Cargando…</p>
+      <BaseAlerta v-else-if="rolesStore.errorPermisosEfectivos" tipo="error" class="mb-5">{{ rolesStore.errorPermisosEfectivos }}</BaseAlerta>
+      <p v-else-if="modulosConAcceso.length === 0" class="mb-5 text-sm text-texto-sutil">Este rol no tiene acceso a ningún módulo todavía.</p>
+      <ul v-else class="mb-6 flex flex-col gap-2.5 rounded-xl border border-borde bg-fondo p-4">
+        <li v-for="item in modulosConAcceso" :key="item.modulo" class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="font-medium text-texto">{{ item.texto }}</span>
+          <span
+            v-for="accion in item.acciones"
+            :key="accion"
+            class="rounded-full bg-acento/10 px-2 py-0.5 text-xs font-medium text-acento"
+          >
+            {{ ETIQUETAS_ACCION[accion] }}
+          </span>
+        </li>
+      </ul>
+
+      <h3 class="border-t border-borde pt-5 text-sm font-semibold text-texto">Excepciones a la plantilla</h3>
+      <p class="mt-1 mb-3 text-xs text-texto-sutil">Conceden o quitan una acción puntual sin cambiar la plantilla base — ya están incluidas en el resumen de arriba.</p>
 
       <BaseAlerta v-if="permisosStore.error" tipo="error" class="mb-5">{{ permisosStore.error }}</BaseAlerta>
       <BaseAlerta v-if="permisosStore.errorAccion" tipo="error" class="mb-5">{{ permisosStore.errorAccion }}</BaseAlerta>
@@ -203,6 +247,7 @@ function manejarEliminarExcepcion(excepcion) {
             type="button"
             class="shrink-0 rounded-lg p-2 text-texto-sutil transition-colors hover:bg-error-fondo hover:text-error"
             :aria-label="confirmandoExcepcionId === excepcion._id ? 'Confirmar eliminación' : 'Eliminar'"
+            :title="confirmandoExcepcionId === excepcion._id ? 'Confirmar eliminación' : 'Eliminar'"
             @click="manejarEliminarExcepcion(excepcion)"
           >
             <PhTrash class="size-[16px]" :class="confirmandoExcepcionId === excepcion._id && 'text-error'" />

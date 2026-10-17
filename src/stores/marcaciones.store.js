@@ -13,12 +13,13 @@ export const useMarcacionesStore = defineStore("marcaciones", () => {
   // ver auditoria.store.js para la referencia del patrón.
   const paginaActual = ref(1);
   const paginacion = ref(null);
+  const limite = ref(10);
 
   async function obtenerPagina() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value, ...filtrosActuales.value };
+      const params = { pagina: paginaActual.value, limite: limite.value, ...filtrosActuales.value };
       const { data: respuesta } = await marcacionServicio.listar(sedeSlugActual.value, params);
       marcaciones.value = respuesta.data.marcaciones;
       paginacion.value = respuesta.data.paginacion;
@@ -27,6 +28,12 @@ export const useMarcacionesStore = defineStore("marcaciones", () => {
     } finally {
       cargando.value = false;
     }
+  }
+
+  async function cambiarLimite(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPagina();
   }
 
   // Punto de entrada público (montar la vista, cambiar sede o filtro): siempre vuelve a la página 1.
@@ -49,5 +56,5 @@ export const useMarcacionesStore = defineStore("marcaciones", () => {
     await obtenerPagina();
   }
 
-  return { marcaciones, cargando, error, paginacion, cargarMarcaciones, irAPaginaSiguiente, irAPaginaAnterior };
+  return { marcaciones, cargando, error, paginacion, limite, cargarMarcaciones, irAPaginaSiguiente, irAPaginaAnterior, cambiarLimite };
 });

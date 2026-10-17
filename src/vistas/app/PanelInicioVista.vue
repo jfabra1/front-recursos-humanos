@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { RouterLink } from "vue-router";
 import {
   PhArrowRight,
+  PhArrowsClockwise,
   PhBriefcase,
   PhCalendarCheck,
   PhCalendarX,
@@ -10,12 +11,14 @@ import {
   PhClockCountdown,
   PhDeviceMobile,
   PhFirstAidKit,
+  PhFileX,
   PhBellRinging,
   PhFileCsv,
   PhGear,
   PhHourglass,
   PhMapPin,
   PhScales,
+  PhSignature,
   PhShieldCheck,
   PhSquaresFour,
   PhUserCircle,
@@ -68,12 +71,33 @@ const todasLasSecciones = [
         icono: PhScales,
         modulo: MODULOS.INSTRUMENTO_COLECTIVO,
       },
+      {
+        nombre: "plantillas-contrato-listado",
+        titulo: "Plantillas de contrato",
+        descripcion: "Textos base para firmar contratos.",
+        icono: PhSignature,
+        modulo: MODULOS.PLANTILLA_CONTRATO,
+      },
+      {
+        nombre: "cartas-renuncia-listado",
+        titulo: "Cartas de renuncia",
+        descripcion: "Las que los empleados redactaron y enviaron a firma.",
+        icono: PhFileX,
+        modulo: MODULOS.CARTA_RENUNCIA,
+      },
     ],
   },
   {
     titulo: "Jornada y asistencia",
     accesos: [
       { nombre: "turnos-listado", titulo: "Turnos", descripcion: "Horarios asignados por sede.", icono: PhCalendarCheck, modulo: MODULOS.TURNO },
+      {
+        nombre: "asignaciones-horario-listado",
+        titulo: "Asignación de horarios",
+        descripcion: "Vínculo recurrente empleado-horario y generación de turnos.",
+        icono: PhArrowsClockwise,
+        modulo: MODULOS.TURNO,
+      },
       { nombre: "asistencia-listado", titulo: "Asistencia", descripcion: "Marcaciones por sede.", icono: PhClockCountdown, modulo: MODULOS.ASISTENCIA },
       {
         nombre: "incidencias-asistencia-listado",

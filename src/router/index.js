@@ -19,6 +19,13 @@ const router = createRouter({
       meta: { soloInvitado: true },
     },
     {
+      // Pública a propósito (sin requiereAutenticacion): la usa alguien sin cuenta en la
+      // plataforma, vía QR/enlace de correo — ver SolicitudFirmaService en el backend.
+      path: "/firmar/:empresaSlug/:token",
+      name: "firma-publica",
+      component: () => import("@/vistas/publico/FirmaPublicaVista.vue"),
+    },
+    {
       path: "/plataforma/acceso",
       name: "operador-iniciar-sesion",
       component: () => import("@/vistas/operador/OperadorIniciarSesionVista.vue"),
@@ -26,9 +33,14 @@ const router = createRouter({
     },
     {
       path: "/plataforma",
-      name: "operador-panel",
-      component: () => import("@/vistas/operador/OperadorPanelVista.vue"),
+      component: () => import("@/vistas/operador/OperadorShellVista.vue"),
       meta: { requiereOperador: true },
+      children: [
+        { path: "", name: "operador-panel", component: () => import("@/vistas/operador/OperadorPanelVista.vue") },
+        { path: "empresas", name: "operador-empresas", component: () => import("@/vistas/operador/OperadorEmpresasVista.vue") },
+        { path: "planes", name: "operador-planes", component: () => import("@/vistas/operador/OperadorPlanesVista.vue") },
+        { path: "reglas-legales", name: "operador-reglas-legales", component: () => import("@/vistas/operador/OperadorReglasLegalesVista.vue") },
+      ],
     },
     {
       path: "/app",
@@ -80,6 +92,18 @@ const router = createRouter({
           meta: { modulo: MODULOS.INSTRUMENTO_COLECTIVO },
         },
         {
+          path: "personas/plantillas-contrato",
+          name: "plantillas-contrato-listado",
+          component: () => import("@/vistas/personas/PlantillasContratoVista.vue"),
+          meta: { modulo: MODULOS.PLANTILLA_CONTRATO },
+        },
+        {
+          path: "personas/cartas-renuncia",
+          name: "cartas-renuncia-listado",
+          component: () => import("@/vistas/personas/CartasRenunciaVista.vue"),
+          meta: { modulo: MODULOS.CARTA_RENUNCIA },
+        },
+        {
           path: "configuracion/empresa",
           name: "empresa-configuracion",
           component: () => import("@/vistas/configuracion/EmpresaConfiguracionVista.vue"),
@@ -113,6 +137,12 @@ const router = createRouter({
           path: "jornada/turnos",
           name: "turnos-listado",
           component: () => import("@/vistas/jornada/TurnosVista.vue"),
+          meta: { modulo: MODULOS.TURNO },
+        },
+        {
+          path: "jornada/asignaciones-horario",
+          name: "asignaciones-horario-listado",
+          component: () => import("@/vistas/jornada/AsignacionesHorarioVista.vue"),
           meta: { modulo: MODULOS.TURNO },
         },
         {

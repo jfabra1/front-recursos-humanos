@@ -35,6 +35,8 @@ export const OPCIONES_MODULO = [
   { valor: "cargo", texto: "Cargos" },
   { valor: "empleado", texto: "Empleados" },
   { valor: "contrato", texto: "Contratos" },
+  { valor: "plantilla_contrato", texto: "Plantillas de contrato" },
+  { valor: "solicitud_firma", texto: "Solicitudes de firma" },
   { valor: "documento", texto: "Documentos" },
   { valor: "instrumento_colectivo", texto: "Convenciones colectivas" },
   { valor: "usuario", texto: "Usuarios" },

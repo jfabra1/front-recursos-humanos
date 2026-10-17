@@ -19,4 +19,13 @@ export default {
   obtenerPrivacidad() {
     return clienteHttp.get(`${rutaBase()}/privacidad`);
   },
+  listarFirmasPendientes() {
+    return clienteHttp.get(`${rutaBase()}/firmas-pendientes`);
+  },
+  obtenerDocumentoFirma(solicitudId) {
+    return clienteHttp.get(`${rutaBase()}/firmas-pendientes/${solicitudId}/documento`, { responseType: "blob" });
+  },
+  firmar(solicitudId, consentimiento) {
+    return clienteHttp.post(`${rutaBase()}/firmas-pendientes/${solicitudId}/firmar`, { consentimiento });
+  },
 };

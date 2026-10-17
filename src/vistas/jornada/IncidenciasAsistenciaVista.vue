@@ -104,10 +104,12 @@ async function manejarResolver(incidencia) {
       </ul>
 
       <BasePaginacion
-        v-if="incidenciasStore.paginacion && incidenciasStore.paginacion.totalPaginas > 1"
+        v-if="incidenciasStore.paginacion"
         :paginacion="incidenciasStore.paginacion"
+        :limite="incidenciasStore.limite"
         @anterior="incidenciasStore.irAPaginaAnterior"
         @siguiente="incidenciasStore.irAPaginaSiguiente"
+        @cambiar-limite="incidenciasStore.cambiarLimite"
       />
     </template>
   </div>

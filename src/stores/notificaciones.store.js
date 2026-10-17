@@ -13,6 +13,9 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
   // independientes (propias/todas), así que cada uno lleva su propio par página/paginación.
   const paginaActualPropias = ref(1);
   const paginacionPropias = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limitePropias = ref(10);
 
   const noLeidas = ref(0);
 
@@ -25,6 +28,8 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
 
   const paginaActualTodas = ref(1);
   const paginacionTodas = ref(null);
+  // Tamaño de página independiente del de "propias" — cada listado maneja el suyo.
+  const limiteTodas = ref(10);
 
   const guardando = ref(false);
   const errorGuardado = ref(null);
@@ -33,7 +38,7 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
     cargandoPropias.value = true;
     errorPropias.value = null;
     try {
-      const params = { pagina: paginaActualPropias.value };
+      const params = { pagina: paginaActualPropias.value, limite: limitePropias.value };
       if (filtrosPropias.estado) params.estado = filtrosPropias.estado;
       if (filtrosPropias.tipo) params.tipo = filtrosPropias.tipo;
       const { data: respuesta } = await notificacionServicio.listarPropias(params);
@@ -48,6 +53,12 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
 
   // Punto de entrada público (montar la vista, cambiar un filtro): siempre vuelve a la página 1.
   async function cargarPropias() {
+    paginaActualPropias.value = 1;
+    await obtenerPaginaPropias();
+  }
+
+  async function cambiarLimitePropias(nuevoLimite) {
+    limitePropias.value = nuevoLimite;
     paginaActualPropias.value = 1;
     await obtenerPaginaPropias();
   }
@@ -91,7 +102,7 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
     cargandoTodas.value = true;
     errorTodas.value = null;
     try {
-      const params = { pagina: paginaActualTodas.value };
+      const params = { pagina: paginaActualTodas.value, limite: limiteTodas.value };
       if (filtrosTodas.destinatarioId) params.destinatarioId = filtrosTodas.destinatarioId;
       if (filtrosTodas.estado) params.estado = filtrosTodas.estado;
       if (filtrosTodas.tipo) params.tipo = filtrosTodas.tipo;
@@ -107,6 +118,12 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
 
   // Punto de entrada público (montar la vista, cambiar un filtro): siempre vuelve a la página 1.
   async function cargarTodas() {
+    paginaActualTodas.value = 1;
+    await obtenerPaginaTodas();
+  }
+
+  async function cambiarLimiteTodas(nuevoLimite) {
+    limiteTodas.value = nuevoLimite;
     paginaActualTodas.value = 1;
     await obtenerPaginaTodas();
   }
@@ -144,9 +161,11 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
     errorPropias,
     filtrosPropias,
     paginacionPropias,
+    limitePropias,
     cargarPropias,
     irAPaginaSiguientePropias,
     irAPaginaAnteriorPropias,
+    cambiarLimitePropias,
     noLeidas,
     cargarNoLeidas,
     errorAccion,
@@ -156,9 +175,11 @@ export const useNotificacionesStore = defineStore("notificaciones", () => {
     errorTodas,
     filtrosTodas,
     paginacionTodas,
+    limiteTodas,
     cargarTodas,
     irAPaginaSiguienteTodas,
     irAPaginaAnteriorTodas,
+    cambiarLimiteTodas,
     guardando,
     errorGuardado,
     crearNotificacion,

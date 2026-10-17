@@ -34,12 +34,15 @@ export const useAreasStore = defineStore("areas", () => {
   const areasPagina = ref([]);
   const paginaActual = ref(1);
   const paginacionAreas = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   async function obtenerPaginaAreas() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value };
+      const params = { pagina: paginaActual.value, limite: limite.value };
       if (filtros.nombre) params.nombre = filtros.nombre;
       const { data: respuesta } = await areaServicio.listar(params);
       areasPagina.value = respuesta.data.areas;
@@ -52,6 +55,12 @@ export const useAreasStore = defineStore("areas", () => {
   }
 
   async function cargarPaginaAreas() {
+    paginaActual.value = 1;
+    await obtenerPaginaAreas();
+  }
+
+  async function cambiarLimiteAreas(nuevoLimite) {
+    limite.value = nuevoLimite;
     paginaActual.value = 1;
     await obtenerPaginaAreas();
   }
@@ -124,9 +133,11 @@ export const useAreasStore = defineStore("areas", () => {
     cargarAreas,
     areasPagina,
     paginacionAreas,
+    limite,
     cargarPaginaAreas,
     irAPaginaSiguienteAreas,
     irAPaginaAnteriorAreas,
+    cambiarLimiteAreas,
     crearArea,
     actualizarArea,
     anularArea,

@@ -19,4 +19,7 @@ export default {
   anular(rolId) {
     return clienteHttp.delete(`${rutaBase()}/${rolId}`);
   },
+  obtenerPermisosEfectivos(rolId) {
+    return clienteHttp.get(`${rutaBase()}/${rolId}/permisos-efectivos`);
+  },
 };

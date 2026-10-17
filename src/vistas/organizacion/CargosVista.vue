@@ -125,6 +125,7 @@ function manejarAnular(cargo) {
             type="button"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
             aria-label="Editar"
+            title="Editar"
             @click="abrirEditar(cargo)"
           >
             <PhPencilSimple class="size-[18px]" />
@@ -146,10 +147,12 @@ function manejarAnular(cargo) {
     </ul>
 
     <BasePaginacion
-      v-if="cargosStore.paginacionCargos && cargosStore.paginacionCargos.totalPaginas > 1"
+      v-if="cargosStore.paginacionCargos"
       :paginacion="cargosStore.paginacionCargos"
+      :limite="cargosStore.limite"
       @anterior="cargosStore.irAPaginaAnteriorCargos"
       @siguiente="cargosStore.irAPaginaSiguienteCargos"
+      @cambiar-limite="cargosStore.cambiarLimiteCargos"
     />
 
     <BaseModal v-model="modalAbierto" :titulo="cargoEditando ? 'Editar cargo' : 'Nuevo cargo'">

@@ -5,6 +5,10 @@ export default {
     return clienteHttpOperador.post("/super/v1/empresas", datosEmpresa);
   },
 
+  listar(filtros = {}) {
+    return clienteHttpOperador.get("/super/v1/empresas", { params: filtros });
+  },
+
   suspender(empresaId, motivo) {
     return clienteHttpOperador.patch(`/super/v1/empresas/${empresaId}/suspender`, { motivo });
   },

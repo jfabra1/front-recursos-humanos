@@ -19,7 +19,7 @@ const instrumentosStore = useInstrumentosColectivosStore();
 const { puede } = usePermisos();
 
 onMounted(() => {
-  instrumentosStore.cargarInstrumentos();
+  instrumentosStore.cargarPaginaInstrumentos();
 });
 
 const modalAbierto = ref(false);
@@ -90,9 +90,9 @@ function manejarAnular(instrumento) {
         label="Buscar"
         placeholder="Nombre del instrumento"
         class="w-64"
-        @keyup.enter="instrumentosStore.cargarInstrumentos"
+        @keyup.enter="instrumentosStore.cargarPaginaInstrumentos"
       />
-      <BaseBoton ancho="auto" variante="secundario" @click="instrumentosStore.cargarInstrumentos">Buscar</BaseBoton>
+      <BaseBoton ancho="auto" variante="secundario" @click="instrumentosStore.cargarPaginaInstrumentos">Buscar</BaseBoton>
     </div>
 
     <BaseAlerta v-if="instrumentosStore.error" tipo="error" class="mt-6">{{ instrumentosStore.error }}</BaseAlerta>
@@ -100,13 +100,13 @@ function manejarAnular(instrumento) {
 
     <p v-if="instrumentosStore.cargando" class="mt-8 text-sm text-texto-sutil">Cargando registros…</p>
 
-    <div v-else-if="instrumentosStore.instrumentos.length === 0" class="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-borde-fuerte py-16 text-center">
+    <div v-else-if="instrumentosStore.instrumentosPagina.length === 0" class="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-borde-fuerte py-16 text-center">
       <PhScales class="size-6 text-texto-sutil" />
       <p class="text-sm text-texto-sutil">Aún no has registrado ninguna convención o pacto.</p>
     </div>
 
     <ul v-else class="mt-6 flex flex-col divide-y divide-borde rounded-2xl border border-borde bg-fondo-elevado">
-      <li v-for="instrumento in instrumentosStore.instrumentos" :key="instrumento._id" class="flex items-center justify-between gap-4 px-5 py-4">
+      <li v-for="instrumento in instrumentosStore.instrumentosPagina" :key="instrumento._id" class="flex items-center justify-between gap-4 px-5 py-4">
         <div class="min-w-0">
           <div class="flex items-center gap-2.5">
             <p class="text-sm font-medium text-texto">{{ instrumento.nombre }}</p>
@@ -135,10 +135,12 @@ function manejarAnular(instrumento) {
     </ul>
 
     <BasePaginacion
-      v-if="instrumentosStore.paginacion && instrumentosStore.paginacion.totalPaginas > 1"
-      :paginacion="instrumentosStore.paginacion"
-      @anterior="instrumentosStore.irAPaginaAnterior"
-      @siguiente="instrumentosStore.irAPaginaSiguiente"
+      v-if="instrumentosStore.paginacionInstrumentos"
+      :paginacion="instrumentosStore.paginacionInstrumentos"
+      :limite="instrumentosStore.limite"
+      @anterior="instrumentosStore.irAPaginaAnteriorInstrumentos"
+      @siguiente="instrumentosStore.irAPaginaSiguienteInstrumentos"
+      @cambiar-limite="instrumentosStore.cambiarLimiteInstrumentos"
     />
 
     <BaseModal v-model="modalAbierto" titulo="Nuevo registro">

@@ -31,12 +31,15 @@ export const useUsuariosStore = defineStore("usuarios", () => {
   const usuariosPagina = ref([]);
   const paginaActual = ref(1);
   const paginacionUsuarios = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   async function obtenerPaginaUsuarios() {
     cargando.value = true;
     error.value = null;
     try {
-      const { data: respuesta } = await usuarioServicio.listar({ pagina: paginaActual.value });
+      const { data: respuesta } = await usuarioServicio.listar({ pagina: paginaActual.value, limite: limite.value });
       usuariosPagina.value = respuesta.data.usuarios;
       paginacionUsuarios.value = respuesta.data.paginacion;
     } catch (err) {
@@ -48,6 +51,12 @@ export const useUsuariosStore = defineStore("usuarios", () => {
 
   // Punto de entrada público (montar la vista): siempre vuelve a la página 1.
   async function cargarPaginaUsuarios() {
+    paginaActual.value = 1;
+    await obtenerPaginaUsuarios();
+  }
+
+  async function cambiarLimiteUsuarios(nuevoLimite) {
+    limite.value = nuevoLimite;
     paginaActual.value = 1;
     await obtenerPaginaUsuarios();
   }
@@ -119,9 +128,11 @@ export const useUsuariosStore = defineStore("usuarios", () => {
     cargarUsuarios,
     usuariosPagina,
     paginacionUsuarios,
+    limite,
     cargarPaginaUsuarios,
     irAPaginaSiguienteUsuarios,
     irAPaginaAnteriorUsuarios,
+    cambiarLimiteUsuarios,
     crearUsuario,
     actualizarUsuario,
     restablecerPassword,

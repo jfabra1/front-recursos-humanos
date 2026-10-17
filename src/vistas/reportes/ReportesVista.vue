@@ -135,6 +135,7 @@ async function manejarGenerar() {
           :disabled="reportesStore.descargandoId === exportacion._id"
           class="shrink-0 rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto disabled:opacity-50"
           aria-label="Descargar"
+          title="Descargar"
           @click="reportesStore.descargarExportacion(exportacion)"
         >
           <PhDownloadSimple class="size-5" />
@@ -143,10 +144,12 @@ async function manejarGenerar() {
     </ul>
 
     <BasePaginacion
-      v-if="reportesStore.paginacion && reportesStore.paginacion.totalPaginas > 1"
+      v-if="reportesStore.paginacion"
       :paginacion="reportesStore.paginacion"
+      :limite="reportesStore.limite"
       @anterior="reportesStore.irAPaginaAnterior"
       @siguiente="reportesStore.irAPaginaSiguiente"
+      @cambiar-limite="reportesStore.cambiarLimite"
     />
   </div>
 </template>

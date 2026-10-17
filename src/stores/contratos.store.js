@@ -12,6 +12,24 @@ export const useContratosStore = defineStore("contratos", () => {
   const errorGuardado = ref(null);
 
   const contratoVigente = computed(() => historial.value.find((contrato) => contrato.vigente) ?? null);
+  // Un otrosí registrado pero aún sin confirmar: no es vigente todavía (el contrato anterior
+  // sigue siéndolo) — ver ContratoService.renovar/confirmarOtrosi en el backend. Solo puede
+  // existir uno a la vez por contrato (el backend lo impide).
+  const otrosiBorrador = computed(() => historial.value.find((contrato) => contrato.confirmado === false) ?? null);
+
+  // Alerta informativa (nunca bloquea nada): cuántas prórrogas de un CTF < 1 año lleva este
+  // contrato, por si la que se está por registrar excedería el tope legal de 3.
+  const alertaOtrosi = ref(null);
+
+  async function cargarAlertaOtrosi(contratoId) {
+    alertaOtrosi.value = null;
+    try {
+      const { data: respuesta } = await contratoServicio.alertaOtrosi(contratoId);
+      alertaOtrosi.value = respuesta.data.alerta;
+    } catch {
+      // Puramente informativo — si falla, simplemente no se muestra ninguna alerta.
+    }
+  }
 
   const porVencer = ref([]);
   const cargandoPorVencer = ref(false);
@@ -46,13 +64,13 @@ export const useContratosStore = defineStore("contratos", () => {
     }
   }
 
+  // El contrato anterior NO se toca aquí — sigue vigente hasta confirmarOtrosi(). El nuevo entra
+  // al historial como borrador (confirmado:false, vigente:false).
   async function renovarContrato(contratoId, datos) {
     guardando.value = true;
     errorGuardado.value = null;
     try {
       const { data: respuesta } = await contratoServicio.renovar(contratoId, datos);
-      const anterior = historial.value.find((contrato) => contrato._id === contratoId);
-      if (anterior) anterior.vigente = false;
       historial.value.unshift(respuesta.data.contrato);
       return true;
     } catch (err) {
@@ -60,6 +78,33 @@ export const useContratosStore = defineStore("contratos", () => {
       return false;
     } finally {
       guardando.value = false;
+    }
+  }
+
+  async function confirmarOtrosi(contratoId) {
+    errorGuardado.value = null;
+    try {
+      const { data: respuesta } = await contratoServicio.confirmarOtrosi(contratoId);
+      const anterior = historial.value.find((contrato) => contrato._id === respuesta.data.contrato.contratoAnteriorId);
+      if (anterior) anterior.vigente = false;
+      const indice = historial.value.findIndex((contrato) => contrato._id === contratoId);
+      if (indice !== -1) historial.value[indice] = respuesta.data.contrato;
+      return true;
+    } catch (err) {
+      errorGuardado.value = err.mensaje;
+      return false;
+    }
+  }
+
+  async function descartarOtrosi(contratoId) {
+    errorGuardado.value = null;
+    try {
+      await contratoServicio.descartarOtrosi(contratoId);
+      historial.value = historial.value.filter((contrato) => contrato._id !== contratoId);
+      return true;
+    } catch (err) {
+      errorGuardado.value = err.mensaje;
+      return false;
     }
   }
 
@@ -84,12 +129,17 @@ export const useContratosStore = defineStore("contratos", () => {
     guardando,
     errorGuardado,
     contratoVigente,
+    otrosiBorrador,
+    alertaOtrosi,
+    cargarAlertaOtrosi,
     porVencer,
     cargandoPorVencer,
     errorPorVencer,
     cargarHistorial,
     crearContrato,
     renovarContrato,
+    confirmarOtrosi,
+    descartarOtrosi,
     cargarPorVencer,
   };
 });

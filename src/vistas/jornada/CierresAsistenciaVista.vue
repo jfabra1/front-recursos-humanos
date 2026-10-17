@@ -127,10 +127,12 @@ async function manejarAvanzar() {
       </ul>
 
       <BasePaginacion
-        v-if="cierresStore.paginacion && cierresStore.paginacion.totalPaginas > 1"
+        v-if="cierresStore.paginacion"
         :paginacion="cierresStore.paginacion"
+        :limite="cierresStore.limite"
         @anterior="cierresStore.irAPaginaAnterior"
         @siguiente="cierresStore.irAPaginaSiguiente"
+        @cambiar-limite="cierresStore.cambiarLimite"
       />
     </template>
 

@@ -98,10 +98,12 @@ function formatoFechaHora(fecha) {
       </ul>
 
       <BasePaginacion
-        v-if="marcacionesStore.paginacion && marcacionesStore.paginacion.totalPaginas > 1"
+        v-if="marcacionesStore.paginacion"
         :paginacion="marcacionesStore.paginacion"
+        :limite="marcacionesStore.limite"
         @anterior="marcacionesStore.irAPaginaAnterior"
         @siguiente="marcacionesStore.irAPaginaSiguiente"
+        @cambiar-limite="marcacionesStore.cambiarLimite"
       />
     </template>
   </div>

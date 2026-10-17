@@ -28,6 +28,8 @@ export const MODULOS = Object.freeze({
   CARGO: "cargo",
   EMPLEADO: "empleado",
   CONTRATO: "contrato",
+  PLANTILLA_CONTRATO: "plantilla_contrato",
+  SOLICITUD_FIRMA: "solicitud_firma",
   DOCUMENTO: "documento",
   INSTRUMENTO_COLECTIVO: "instrumento_colectivo",
   USUARIO: "usuario",

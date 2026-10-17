@@ -32,12 +32,15 @@ export const useHorariosStore = defineStore("horarios", () => {
   const horariosPagina = ref([]);
   const paginaActual = ref(1);
   const paginacionHorarios = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   async function obtenerPaginaHorarios() {
     cargando.value = true;
     error.value = null;
     try {
-      const { data: respuesta } = await horarioServicio.listar({ pagina: paginaActual.value });
+      const { data: respuesta } = await horarioServicio.listar({ pagina: paginaActual.value, limite: limite.value });
       horariosPagina.value = respuesta.data.horarios;
       paginacionHorarios.value = respuesta.data.paginacion;
     } catch (err) {
@@ -49,6 +52,12 @@ export const useHorariosStore = defineStore("horarios", () => {
 
   // Punto de entrada público (montar la vista): siempre vuelve a la página 1.
   async function cargarPaginaHorarios() {
+    paginaActual.value = 1;
+    await obtenerPaginaHorarios();
+  }
+
+  async function cambiarLimiteHorarios(nuevoLimite) {
+    limite.value = nuevoLimite;
     paginaActual.value = 1;
     await obtenerPaginaHorarios();
   }
@@ -120,9 +129,11 @@ export const useHorariosStore = defineStore("horarios", () => {
     cargarHorarios,
     horariosPagina,
     paginacionHorarios,
+    limite,
     cargarPaginaHorarios,
     irAPaginaSiguienteHorarios,
     irAPaginaAnteriorHorarios,
+    cambiarLimiteHorarios,
     crearHorario,
     actualizarHorario,
     anularHorario,

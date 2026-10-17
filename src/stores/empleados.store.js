@@ -38,12 +38,15 @@ export const useEmpleadosStore = defineStore("empleados", () => {
   const empleadosPagina = ref([]);
   const paginaActual = ref(1);
   const paginacionEmpleados = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   async function obtenerPaginaEmpleados() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value, activo: filtros.activo };
+      const params = { pagina: paginaActual.value, limite: limite.value, activo: filtros.activo };
       if (filtros.buscar) params.buscar = filtros.buscar;
       const { data: respuesta } = await empleadoServicio.listar(params);
       empleadosPagina.value = respuesta.data.empleados;
@@ -57,6 +60,12 @@ export const useEmpleadosStore = defineStore("empleados", () => {
 
   // Punto de entrada público (montar la vista, cambiar un filtro): siempre vuelve a la página 1.
   async function cargarPaginaEmpleados() {
+    paginaActual.value = 1;
+    await obtenerPaginaEmpleados();
+  }
+
+  async function cambiarLimiteEmpleados(nuevoLimite) {
+    limite.value = nuevoLimite;
     paginaActual.value = 1;
     await obtenerPaginaEmpleados();
   }
@@ -143,9 +152,11 @@ export const useEmpleadosStore = defineStore("empleados", () => {
     cargarEmpleados,
     empleadosPagina,
     paginacionEmpleados,
+    limite,
     cargarPaginaEmpleados,
     irAPaginaSiguienteEmpleados,
     irAPaginaAnteriorEmpleados,
+    cambiarLimiteEmpleados,
     crearEmpleado,
     actualizarEmpleado,
     darDeBajaEmpleado,

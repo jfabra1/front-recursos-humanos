@@ -13,6 +13,9 @@ export const useReportesStore = defineStore("reportes", () => {
   // ver auditoria.store.js para la referencia del patrón.
   const paginaActual = ref(1);
   const paginacion = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   const generando = ref(false);
   const errorGenerar = ref(null);
@@ -24,7 +27,7 @@ export const useReportesStore = defineStore("reportes", () => {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value };
+      const params = { pagina: paginaActual.value, limite: limite.value };
       if (filtros.tipo) params.tipo = filtros.tipo;
       if (filtros.generadoPor) params.generadoPor = filtros.generadoPor;
       const { data: respuesta } = await reporteServicio.listar(params);
@@ -35,6 +38,12 @@ export const useReportesStore = defineStore("reportes", () => {
     } finally {
       cargando.value = false;
     }
+  }
+
+  async function cambiarLimite(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPagina();
   }
 
   // Punto de entrada público (montar la vista, cambiar un filtro): siempre vuelve a la página 1.
@@ -104,9 +113,11 @@ export const useReportesStore = defineStore("reportes", () => {
     error,
     filtros,
     paginacion,
+    limite,
     cargarExportaciones,
     irAPaginaSiguiente,
     irAPaginaAnterior,
+    cambiarLimite,
     generando,
     errorGenerar,
     generarReporte,

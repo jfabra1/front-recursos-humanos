@@ -8,6 +8,8 @@ import BaseAlerta from "@/componentes/base/BaseAlerta.vue";
 import BasePaginacion from "@/componentes/base/BasePaginacion.vue";
 import { useAuditoriaStore } from "@/stores/auditoria.store";
 import { useUsuariosStore } from "@/stores/usuarios.store";
+import { ETIQUETAS_ACCION_AUDITORIA } from "@/utils/auditoria.util";
+import { formatoFechaHora } from "@/utils/formato.util";
 
 const auditoriaStore = useAuditoriaStore();
 const usuariosStore = useUsuariosStore();
@@ -16,17 +18,6 @@ onMounted(() => {
   if (usuariosStore.usuarios.length === 0) usuariosStore.cargarUsuarios();
   auditoriaStore.cargarRegistros();
 });
-
-const ETIQUETAS_ACCION_AUDITORIA = {
-  creacion: "Creación",
-  actualizacion: "Actualización",
-  anulacion: "Anulación",
-  cambio_estado: "Cambio de estado",
-};
-
-function formatoFechaHora(fecha) {
-  return new Date(fecha).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
-}
 
 function nombreUsuario(registro) {
   const usuario = usuariosStore.usuarios.find((item) => item._id === registro.usuarioId);
@@ -82,10 +73,12 @@ function nombreUsuario(registro) {
     </ul>
 
     <BasePaginacion
-      v-if="auditoriaStore.paginacion && auditoriaStore.paginacion.totalPaginas > 1"
+      v-if="auditoriaStore.paginacion"
       :paginacion="auditoriaStore.paginacion"
+      :limite="auditoriaStore.limite"
       @anterior="auditoriaStore.irAPaginaAnterior"
       @siguiente="auditoriaStore.irAPaginaSiguiente"
+      @cambiar-limite="auditoriaStore.cambiarLimite"
     />
   </div>
 </template>

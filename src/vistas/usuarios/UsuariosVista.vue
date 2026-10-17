@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from "vue";
-import { PhKey, PhPencilSimple, PhUserPlus, PhUsers } from "@phosphor-icons/vue";
+import { PhIdentificationBadge, PhKey, PhPencilSimple, PhUserPlus, PhUsers } from "@phosphor-icons/vue";
 import BaseModal from "@/componentes/base/BaseModal.vue";
 import BaseInput from "@/componentes/base/BaseInput.vue";
 import BaseSelect from "@/componentes/base/BaseSelect.vue";
@@ -12,6 +12,7 @@ import { useRolesStore } from "@/stores/roles.store";
 import { useEmpleadosStore } from "@/stores/empleados.store";
 import { usePermisos } from "@/composables/usePermisos";
 import { MODULOS, ACCIONES } from "@/utils/permisos.util";
+import { ETIQUETAS_ESTADO } from "@/utils/empleado.util";
 
 const usuariosStore = useUsuariosStore();
 const rolesStore = useRolesStore();
@@ -28,6 +29,20 @@ const opcionesRoles = computed(() => rolesStore.roles.filter((rol) => rol.activo
 const opcionesEmpleados = computed(() =>
   empleadosStore.empleados.map((empleado) => ({ valor: empleado._id, texto: `${empleado.personaId.nombres} ${empleado.personaId.apellidos}` })),
 );
+
+function empleadoDeUsuario(usuario) {
+  if (!usuario?.empleadoId) return undefined;
+  return empleadosStore.empleados.find((empleado) => empleado._id === usuario.empleadoId);
+}
+
+// Modal empleado vinculado
+const modalEmpleadoAbierto = ref(false);
+const usuarioEmpleado = ref(null);
+
+function abrirEmpleado(usuario) {
+  usuarioEmpleado.value = usuario;
+  modalEmpleadoAbierto.value = true;
+}
 
 // Modal crear/editar usuario
 const modalUsuarioAbierto = ref(false);
@@ -111,33 +126,52 @@ async function manejarRestablecerPassword() {
               {{ usuario.estado === "activo" ? "Activo" : "Bloqueado" }}
             </span>
           </div>
+          <p v-if="puede(MODULOS.EMPLEADO, ACCIONES.LEER)" class="mt-0.5 text-xs text-texto-sutil">
+            {{ empleadoDeUsuario(usuario) ? `${empleadoDeUsuario(usuario).personaId.nombres} ${empleadoDeUsuario(usuario).personaId.apellidos}` : "Sin empleado vinculado" }}
+          </p>
         </div>
-        <div v-if="puede(MODULOS.USUARIO, ACCIONES.EDITAR)" class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5">
           <button
+            v-if="puede(MODULOS.EMPLEADO, ACCIONES.LEER) && empleadoDeUsuario(usuario)"
             type="button"
             class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
-            aria-label="Restablecer contraseña"
-            @click="abrirRestablecerPassword(usuario)"
+            aria-label="Ver empleado"
+            title="Ver empleado vinculado"
+            @click="abrirEmpleado(usuario)"
           >
-            <PhKey class="size-[18px]" />
+            <PhIdentificationBadge class="size-[18px]" />
           </button>
-          <button
-            type="button"
-            class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
-            aria-label="Editar"
-            @click="abrirEditar(usuario)"
-          >
-            <PhPencilSimple class="size-[18px]" />
-          </button>
+          <template v-if="puede(MODULOS.USUARIO, ACCIONES.EDITAR)">
+            <button
+              type="button"
+              class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
+              aria-label="Restablecer contraseña"
+              title="Restablecer contraseña"
+              @click="abrirRestablecerPassword(usuario)"
+            >
+              <PhKey class="size-[18px]" />
+            </button>
+            <button
+              type="button"
+              class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-fondo hover:text-texto"
+              aria-label="Editar"
+              title="Editar"
+              @click="abrirEditar(usuario)"
+            >
+              <PhPencilSimple class="size-[18px]" />
+            </button>
+          </template>
         </div>
       </li>
     </ul>
 
     <BasePaginacion
-      v-if="usuariosStore.paginacionUsuarios && usuariosStore.paginacionUsuarios.totalPaginas > 1"
+      v-if="usuariosStore.paginacionUsuarios"
       :paginacion="usuariosStore.paginacionUsuarios"
+      :limite="usuariosStore.limite"
       @anterior="usuariosStore.irAPaginaAnteriorUsuarios"
       @siguiente="usuariosStore.irAPaginaSiguienteUsuarios"
+      @cambiar-limite="usuariosStore.cambiarLimiteUsuarios"
     />
 
     <BaseModal v-model="modalUsuarioAbierto" :titulo="usuarioEditando ? 'Editar usuario' : 'Nuevo usuario'">
@@ -192,6 +226,45 @@ async function manejarRestablecerPassword() {
         />
         <BaseBoton tipo="submit" :cargando="usuariosStore.guardando" class="mt-1">Restablecer</BaseBoton>
       </form>
+    </BaseModal>
+
+    <BaseModal v-model="modalEmpleadoAbierto" titulo="Empleado vinculado">
+      <template v-if="usuarioEmpleado && empleadoDeUsuario(usuarioEmpleado)">
+        <dl class="flex flex-col gap-3 text-sm">
+          <div>
+            <dt class="text-xs text-texto-sutil">Nombre</dt>
+            <dd class="mt-0.5 text-texto">
+              {{ empleadoDeUsuario(usuarioEmpleado).personaId.nombres }} {{ empleadoDeUsuario(usuarioEmpleado).personaId.apellidos }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-texto-sutil">Documento</dt>
+            <dd class="mt-0.5 text-texto">{{ empleadoDeUsuario(usuarioEmpleado).personaId.numeroDocumento }}</dd>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <dt class="text-xs text-texto-sutil">Sede</dt>
+              <dd class="mt-0.5 text-texto">{{ empleadoDeUsuario(usuarioEmpleado).sedeId?.nombre || "—" }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-texto-sutil">Cargo</dt>
+              <dd class="mt-0.5 text-texto">{{ empleadoDeUsuario(usuarioEmpleado).cargoId?.nombre || "—" }}</dd>
+            </div>
+          </div>
+          <div>
+            <dt class="text-xs text-texto-sutil">Estado</dt>
+            <dd class="mt-0.5">
+              <span
+                class="rounded-full px-2 py-0.5 text-xs font-medium"
+                :class="empleadoDeUsuario(usuarioEmpleado).estado === 'activo' ? 'bg-exito/10 text-exito' : 'bg-error-fondo text-error'"
+              >
+                {{ ETIQUETAS_ESTADO[empleadoDeUsuario(usuarioEmpleado).estado] }}
+              </span>
+            </dd>
+          </div>
+        </dl>
+      </template>
+      <p v-else class="text-sm text-texto-sutil">Este usuario no tiene ningún empleado vinculado.</p>
     </BaseModal>
   </div>
 </template>

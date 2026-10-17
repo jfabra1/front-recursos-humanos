@@ -10,6 +10,9 @@ export default {
   listar(sedeSlug, filtros = {}) {
     return clienteHttp.get(rutaBase(sedeSlug), { params: filtros });
   },
+  resumenPorEmpleado(sedeSlug, params = {}) {
+    return clienteHttp.get(`${rutaBase(sedeSlug)}/resumen-por-empleado`, { params });
+  },
   crear(sedeSlug, datos) {
     return clienteHttp.post(rutaBase(sedeSlug), datos);
   },

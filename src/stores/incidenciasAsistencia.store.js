@@ -16,12 +16,13 @@ export const useIncidenciasAsistenciaStore = defineStore("incidenciasAsistencia"
   // ver auditoria.store.js para la referencia del patrón.
   const paginaActual = ref(1);
   const paginacion = ref(null);
+  const limite = ref(10);
 
   async function obtenerPagina() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value };
+      const params = { pagina: paginaActual.value, limite: limite.value };
       if (filtros.estado) params.estado = filtros.estado;
       const { data: respuesta } = await incidenciaAsistenciaServicio.listar(sedeSlugActual.value, params);
       incidencias.value = respuesta.data.incidencias;
@@ -31,6 +32,12 @@ export const useIncidenciasAsistenciaStore = defineStore("incidenciasAsistencia"
     } finally {
       cargando.value = false;
     }
+  }
+
+  async function cambiarLimite(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPagina();
   }
 
   // Punto de entrada público (montar la vista, cambiar sede o filtro): siempre vuelve a la página 1.
@@ -78,5 +85,20 @@ export const useIncidenciasAsistenciaStore = defineStore("incidenciasAsistencia"
     }
   }
 
-  return { incidencias, sedeSlugActual, cargando, error, errorAccion, filtros, cargarIncidencias, marcarEnRevision, resolver };
+  return {
+    incidencias,
+    sedeSlugActual,
+    cargando,
+    error,
+    errorAccion,
+    filtros,
+    paginacion,
+    limite,
+    cargarIncidencias,
+    irAPaginaSiguiente,
+    irAPaginaAnterior,
+    cambiarLimite,
+    marcarEnRevision,
+    resolver,
+  };
 });

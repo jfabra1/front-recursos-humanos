@@ -35,6 +35,19 @@ async function manejarMarcarLeida(notificacion) {
   await notificacionesStore.marcarLeida(notificacion._id);
 }
 
+// Modal detalle
+const modalDetalleAbierto = ref(false);
+const notificacionDetalle = ref(null);
+
+function verDetalle(notificacion) {
+  notificacionDetalle.value = notificacion;
+  // Si el detalle muestra el destinatario (solo cuando el rol puede ver "Todas"), hace falta la
+  // lista de usuarios para resolver el nombre — en la pestaña "Mis notificaciones" puede que
+  // todavía no se haya cargado (solo se pedía al entrar a "Todas" o al abrir "Nueva notificación").
+  if (puedeVerTodas.value && usuariosStore.usuarios.length === 0) usuariosStore.cargarUsuarios();
+  modalDetalleAbierto.value = true;
+}
+
 function cambiarPestana(valor) {
   pestanaActiva.value = valor;
   if (valor === "todas" && puedeVerTodas.value) {
@@ -137,23 +150,35 @@ async function manejarCrear() {
             <p class="mt-1 text-sm text-texto-sutil">{{ notificacion.mensaje }}</p>
             <p class="mt-1 text-xs text-texto-sutil">{{ formatoFechaHora(notificacion.createdAt) }}</p>
           </div>
-          <button
-            v-if="notificacion.estado !== 'leida'"
-            type="button"
-            class="shrink-0 rounded-lg p-2 text-texto-sutil transition-colors hover:bg-exito/10 hover:text-exito"
-            aria-label="Marcar como leída"
-            @click="manejarMarcarLeida(notificacion)"
-          >
-            <PhCheck class="size-5" />
-          </button>
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              class="rounded-lg px-3 py-1.5 text-xs font-medium text-acento transition-colors hover:bg-acento/10"
+              @click="verDetalle(notificacion)"
+            >
+              Ver más
+            </button>
+            <button
+              v-if="notificacion.estado !== 'leida'"
+              type="button"
+              class="rounded-lg p-2 text-texto-sutil transition-colors hover:bg-exito/10 hover:text-exito"
+              aria-label="Marcar como leída"
+              title="Marcar como leída"
+              @click="manejarMarcarLeida(notificacion)"
+            >
+              <PhCheck class="size-5" />
+            </button>
+          </div>
         </li>
       </ul>
 
       <BasePaginacion
-        v-if="notificacionesStore.paginacionPropias && notificacionesStore.paginacionPropias.totalPaginas > 1"
+        v-if="notificacionesStore.paginacionPropias"
         :paginacion="notificacionesStore.paginacionPropias"
+        :limite="notificacionesStore.limitePropias"
         @anterior="notificacionesStore.irAPaginaAnteriorPropias"
         @siguiente="notificacionesStore.irAPaginaSiguientePropias"
+        @cambiar-limite="notificacionesStore.cambiarLimitePropias"
       />
     </section>
 
@@ -202,14 +227,23 @@ async function manejarCrear() {
             <p v-if="notificacion.errorEnvio" class="mt-1 text-xs text-error">{{ notificacion.errorEnvio }}</p>
             <p class="mt-1 text-xs text-texto-sutil">{{ formatoFechaHora(notificacion.createdAt) }}</p>
           </div>
+          <button
+            type="button"
+            class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-acento transition-colors hover:bg-acento/10"
+            @click="verDetalle(notificacion)"
+          >
+            Ver más
+          </button>
         </li>
       </ul>
 
       <BasePaginacion
-        v-if="notificacionesStore.paginacionTodas && notificacionesStore.paginacionTodas.totalPaginas > 1"
+        v-if="notificacionesStore.paginacionTodas"
         :paginacion="notificacionesStore.paginacionTodas"
+        :limite="notificacionesStore.limiteTodas"
         @anterior="notificacionesStore.irAPaginaAnteriorTodas"
         @siguiente="notificacionesStore.irAPaginaSiguienteTodas"
+        @cambiar-limite="notificacionesStore.cambiarLimiteTodas"
       />
     </section>
 
@@ -223,6 +257,42 @@ async function manejarCrear() {
         <BaseTextarea v-model="formulario.mensaje" label="Mensaje" requerido />
         <BaseBoton tipo="submit" :cargando="notificacionesStore.guardando" class="mt-1">Enviar</BaseBoton>
       </form>
+    </BaseModal>
+
+    <BaseModal v-model="modalDetalleAbierto" :titulo="notificacionDetalle?.titulo || 'Detalle de la notificación'">
+      <template v-if="notificacionDetalle">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <span class="rounded-full bg-acento/10 px-2 py-0.5 text-xs font-medium text-acento">{{ ETIQUETAS_CANAL_NOTIFICACION[notificacionDetalle.canal] }}</span>
+          <span class="rounded-full bg-fondo px-2 py-0.5 text-xs font-medium text-texto-sutil">{{ ETIQUETAS_ESTADO_NOTIFICACION[notificacionDetalle.estado] }}</span>
+        </div>
+
+        <dl class="mt-5 flex flex-col gap-4 text-sm">
+          <div>
+            <dt class="text-xs text-texto-sutil">Mensaje</dt>
+            <dd class="mt-0.5 leading-relaxed text-texto">{{ notificacionDetalle.mensaje }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-texto-sutil">Tipo</dt>
+            <dd class="mt-0.5 text-texto">{{ notificacionDetalle.tipo }}</dd>
+          </div>
+          <div v-if="puedeVerTodas">
+            <dt class="text-xs text-texto-sutil">Destinatario</dt>
+            <dd class="mt-0.5 text-texto">{{ nombreUsuario(notificacionDetalle.destinatarioId) }}</dd>
+          </div>
+          <div v-if="notificacionDetalle.errorEnvio">
+            <dt class="text-xs text-texto-sutil">Error de envío</dt>
+            <dd class="mt-0.5 text-error">{{ notificacionDetalle.errorEnvio }}</dd>
+          </div>
+          <div v-if="notificacionDetalle.payload && Object.keys(notificacionDetalle.payload).length > 0">
+            <dt class="text-xs text-texto-sutil">Datos adicionales</dt>
+            <dd class="mt-0.5 rounded-lg bg-fondo p-3 font-mono text-xs break-all text-texto">{{ JSON.stringify(notificacionDetalle.payload) }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-texto-sutil">Fecha</dt>
+            <dd class="mt-0.5 text-texto">{{ formatoFechaHora(notificacionDetalle.createdAt) }}</dd>
+          </div>
+        </dl>
+      </template>
     </BaseModal>
   </div>
 </template>

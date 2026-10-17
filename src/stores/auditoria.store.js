@@ -15,12 +15,15 @@ export const useAuditoriaStore = defineStore("auditoria", () => {
   // consumidores de la API, no para este panel).
   const paginaActual = ref(1);
   const paginacion = ref(null);
+  // Tamaño de página: lo controla el usuario desde BasePaginacion (opciones 10/20/50/100),
+  // nunca se recorta en el frontend — siempre se vuelve a pedir al backend con el nuevo valor.
+  const limite = ref(10);
 
   async function obtenerPagina() {
     cargando.value = true;
     error.value = null;
     try {
-      const params = { pagina: paginaActual.value };
+      const params = { pagina: paginaActual.value, limite: limite.value };
       if (filtros.entidad) params.entidad = filtros.entidad;
       if (filtros.accion) params.accion = filtros.accion;
       const { data: respuesta } = await auditoriaServicio.listar(params);
@@ -31,6 +34,12 @@ export const useAuditoriaStore = defineStore("auditoria", () => {
     } finally {
       cargando.value = false;
     }
+  }
+
+  async function cambiarLimite(nuevoLimite) {
+    limite.value = nuevoLimite;
+    paginaActual.value = 1;
+    await obtenerPagina();
   }
 
   // Punto de entrada público (montar la vista, cambiar un filtro): siempre vuelve a la página 1,
@@ -52,5 +61,83 @@ export const useAuditoriaStore = defineStore("auditoria", () => {
     await obtenerPagina();
   }
 
-  return { registros, cargando, error, filtros, paginacion, cargarRegistros, irAPaginaSiguiente, irAPaginaAnterior };
+  // Segundo listado independiente: la trazabilidad de UNA entidad puntual (ej. "este empleado"),
+  // usada desde botones de "Trazabilidad" en otras vistas — no comparte estado con el listado
+  // general de arriba, para no pisar los filtros/página que el usuario tenga en Auditoría.
+  const registrosEntidad = ref([]);
+  const cargandoEntidad = ref(false);
+  const errorEntidad = ref(null);
+  const entidadActual = ref(null);
+  const entidadIdActual = ref(null);
+
+  const paginaActualEntidad = ref(1);
+  const paginacionEntidad = ref(null);
+  const limiteEntidad = ref(10);
+
+  async function obtenerPaginaEntidad() {
+    cargandoEntidad.value = true;
+    errorEntidad.value = null;
+    try {
+      const params = {
+        pagina: paginaActualEntidad.value,
+        limite: limiteEntidad.value,
+        entidad: entidadActual.value,
+        entidadId: entidadIdActual.value,
+      };
+      const { data: respuesta } = await auditoriaServicio.listar(params);
+      registrosEntidad.value = respuesta.data.registros;
+      paginacionEntidad.value = respuesta.data.paginacion;
+    } catch (err) {
+      errorEntidad.value = err.mensaje;
+    } finally {
+      cargandoEntidad.value = false;
+    }
+  }
+
+  async function cargarPorEntidad(entidad, entidadId) {
+    entidadActual.value = entidad;
+    entidadIdActual.value = entidadId;
+    paginaActualEntidad.value = 1;
+    await obtenerPaginaEntidad();
+  }
+
+  async function cambiarLimiteEntidad(nuevoLimite) {
+    limiteEntidad.value = nuevoLimite;
+    paginaActualEntidad.value = 1;
+    await obtenerPaginaEntidad();
+  }
+
+  async function irAPaginaSiguienteEntidad() {
+    if (!paginacionEntidad.value?.hayPaginaSiguiente) return;
+    paginaActualEntidad.value += 1;
+    await obtenerPaginaEntidad();
+  }
+
+  async function irAPaginaAnteriorEntidad() {
+    if (!paginacionEntidad.value?.hayPaginaAnterior) return;
+    paginaActualEntidad.value -= 1;
+    await obtenerPaginaEntidad();
+  }
+
+  return {
+    registros,
+    cargando,
+    error,
+    filtros,
+    paginacion,
+    limite,
+    cargarRegistros,
+    irAPaginaSiguiente,
+    irAPaginaAnterior,
+    cambiarLimite,
+    registrosEntidad,
+    cargandoEntidad,
+    errorEntidad,
+    paginacionEntidad,
+    limiteEntidad,
+    cargarPorEntidad,
+    cambiarLimiteEntidad,
+    irAPaginaSiguienteEntidad,
+    irAPaginaAnteriorEntidad,
+  };
 });

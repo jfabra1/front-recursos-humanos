@@ -13,6 +13,15 @@ export default {
   renovar(contratoId, datos) {
     return clienteHttp.post(`${rutaBase()}/${contratoId}/renovar`, datos);
   },
+  alertaOtrosi(contratoId) {
+    return clienteHttp.get(`${rutaBase()}/${contratoId}/alerta-otrosi`);
+  },
+  confirmarOtrosi(contratoId) {
+    return clienteHttp.post(`${rutaBase()}/${contratoId}/confirmar-otrosi`);
+  },
+  descartarOtrosi(contratoId) {
+    return clienteHttp.delete(`${rutaBase()}/${contratoId}/otrosi`);
+  },
   historialPorEmpleado(empleadoId) {
     return clienteHttp.get(`${rutaBase()}/empleado/${empleadoId}/historial`);
   },
